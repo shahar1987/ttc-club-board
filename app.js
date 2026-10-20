@@ -344,6 +344,7 @@ function boot(){
   const start=(location.hash||"").slice(1);
   moveBall("home",true);
   hideSplash();
+  introDone.then(()=>setTimeout(maybePopup,1200)); // the event popup needs only the posts, not the Firebase bundle
   if(ORDER.includes(start)&&start!=="home")setTimeout(()=>go(start,{silent:true,quiet:true}),150);
 }
 Promise.all([
@@ -434,7 +435,7 @@ function startAuth(){
     // sign in once: a weak line or a slow answer must never look like "not registered"
     if(u){const r=await loadMember(u);ME.member=r.member;if(r.unsure)setTimeout(()=>loadMember(u).then(x=>{if(!x.unsure&&ME.user===u){ME.member=x.member;renderMe()}}),15000)}
     else rememberMe(null);
-    ME.ready=true;renderMe();setTimeout(maybePopup,600)}),{once:true});
+    ME.ready=true;renderMe()}),{once:true});
   const sc=document.createElement("script");sc.src="auth.js?v="+(BUILD||"1");sc.defer=true;document.head.appendChild(sc);
 }
 const SIGNIN_ON=true;
