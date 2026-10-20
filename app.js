@@ -174,12 +174,12 @@ function renderPosts(){
   const bn=ps.filter(x=>x.banner).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")))[0];
   $("#noticeWrap").innerHTML=bn?`<div class="notice" role="status"><b>הודעה</b><span>${esc(bn.title)}${bn.text?" · "+esc(bn.text):""}</span></div>`:"";
   const list=ps.filter(x=>!x.banner).sort((a,b)=>(!!b.pin-!!a.pin)||String(b.date||"").localeCompare(String(a.date||"")));
-  const img=u=>/^img\/[\w.-]+$/.test(u||"")?u:"";
+  const img=u=>IMG_OK.test(u||"")?u:"";
   $("#newsRail").innerHTML=list.map(x=>`<button class="pcard" data-post="${POSTS.indexOf(x)}">${img(x.img)?`<img src="${img(x.img)}" alt="" loading="lazy">`:""}<div class="in"><span class="dt">${/^\d{4}-\d{2}-\d{2}$/.test(x.date||"")?new Date(x.date+"T12:00").toLocaleDateString("he-IL",{day:"numeric",month:"long"}):""}${x.pin?" · נעוץ":""}</span><h3>${esc(x.title)}</h3>${x.text?`<p>${esc(x.text)}</p>`:""}</div></button>`).join("");
   $("#newsSec").hidden=!list.length;
 }
 document.addEventListener("click",e=>{const b=e.target.closest("[data-post]");if(!b)return;const x=POSTS[+b.dataset.post];if(!x)return;if(x.popup&&x===activeEvent())return openEvent();
-  const img=/^img\/[\w.-]+$/.test(x.img||"")?x.img:"",link=/^https:\/\//.test(x.link||"")?x.link:"";
+  const img=IMG_OK.test(x.img||"")?x.img:"",link=/^https:\/\//.test(x.link||"")?x.link:"";
   openSheet(`${img?`<img class="post-img" src="${img}" alt="">`:""}<h2 class="post-h">${esc(x.title)}</h2>${x.text?`<div class="post-t">${esc(x.text)}</div>`:""}${link?`<a class="btn" style="margin-top:14px" href="${esc(link)}" target="_blank" rel="noopener">${esc(x.linkText||"לפרטים")}</a>`:""}`);track("post",x.title)});
 
 /* ---------- leagues ---------- */
@@ -322,6 +322,8 @@ const introDone=new Promise(r=>setTimeout(r,RM.matches?150:seen?1050:1900));
 function hideSplash(){introDone.then(()=>{$("#splash").classList.add("gone");$("#s-home").classList.add("enter-home")})}
 /* ---------- boot ---------- */
 // updates published by staff with the "boardPosts" permission (attendance app) — public read, no sign-in needed
+// pictures in a post: a club file under img/, or an image saved from the admin page (data URL)
+const IMG_OK=/^(img\/[\w.-]+|data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+)$/;
 // a slow mobile line must never leave people on the opening screen: every startup request gives up in time
 const tfetch=(u,o={},ms=6000)=>{const c=new AbortController();setTimeout(()=>c.abort(),ms);return fetch(u,{...o,signal:c.signal})};
 async function staffPosts(){try{
@@ -330,7 +332,15 @@ async function staffPosts(){try{
     body:JSON.stringify({structuredQuery:{from:[{collectionId:"boardPosts"}],where:{fieldFilter:{field:{fieldPath:"hidden"},op:"EQUAL",value:{booleanValue:false}}},limit:20}})},4000);
   if(!r.ok)return[];const j=await r.json();
   const v=f=>f?(f.stringValue??f.booleanValue??""):"";
-  return (Array.isArray(j)?j:[]).map(x=>x.document).filter(Boolean).map(d=>{const f=d.fields||{};return{id:"s:"+d.name.split("/").pop(),title:String(v(f.title)).slice(0,90),text:String(v(f.text)).slice(0,1200),banner:v(f.banner)===true,pin:v(f.pin)===true,hidden:v(f.hidden)===true,link:String(v(f.link)),linkText:String(v(f.linkText)).slice(0,30),date:String(v(f.date))}}).filter(x=>x.title);
+  const pop=f=>{const m=f&&f.mapValue&&f.mapValue.fields;if(!m)return undefined;const heats=((m.heats&&m.heats.arrayValue&&m.heats.arrayValue.values)||[]).map(x=>String(x.stringValue||"")).filter(Boolean);
+    return{event:String(v(m.event)),heats,until:String(v(m.until))}};
+  const list=(Array.isArray(j)?j:[]).map(x=>x.document).filter(Boolean).map(d=>{const f=d.fields||{};return{id:"s:"+d.name.split("/").pop(),title:String(v(f.title)).slice(0,90),text:String(v(f.text)).slice(0,1200),banner:v(f.banner)===true,pin:v(f.pin)===true,hidden:v(f.hidden)===true,link:String(v(f.link)),linkText:String(v(f.linkText)).slice(0,30),date:String(v(f.date)),imgId:String(v(f.img)),popup:pop(f.popup)}}).filter(x=>x.title);
+  // images never change once saved, so each device downloads each one only once
+  await Promise.all(list.filter(x=>/^[\w-]{1,40}$/.test(x.imgId)).map(async x=>{const k="ttc_img_"+x.imgId;let d=store.get(k);
+    if(!d){try{const r=await tfetch(`https://firestore.googleapis.com/v1/projects/ttcmh-2a752/databases/(default)/documents/boardImages/${x.imgId}?key=AIzaSyCmEVnBSkODaCZyrdEdO0vNQtvOnvgsQiA`,{},6000);
+      if(r.ok){d=String(v(((await r.json()).fields||{}).data));if(IMG_OK.test(d))store.set(k,d)}}catch(e){}}
+    if(d&&IMG_OK.test(d))x.img=d}));
+  return list;
 }catch(e){return[]}}
 function boot(){
   for(const f of [renderHome,renderPosts,renderLeagueTabs,()=>renderLeague(0),renderRank,renderClub])try{f()}catch(e){console.error(e)}
@@ -366,7 +376,7 @@ function renderMe(){
   el.innerHTML=`<div class="tx"><b>${esc(ME.member.name)}</b>מחובר/ת · ${esc(ME.user.email)}</div><button class="btn ghost" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">הפרטים שלי</button>`;
   el.insertAdjacentHTML("beforeend",'<button class="btn invite" id="invite" type="button">🎁 להזמין חבר/ה לאימון ניסיון</button>');
   if(pushAsk())el.insertAdjacentHTML("beforeend",'<button class="btn invite" id="pushOn" type="button">🔔 לקבל התראות מהמועדון</button>');
-  isOwner(ME.user.email).then(o=>{if(o&&!$("#adminLink"))$("#tabbar").insertAdjacentHTML("beforeend",'<a class="tab" id="adminLink" href="https://claude.ai/artifact/3SXiwqugcLXd7LS3ZZ82CY" target="_blank" rel="noopener"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>ניהול</a>');moveBall(current,true)});
+  isOwner(ME.user.email).then(o=>{if(o&&!$("#adminLink"))$("#tabbar").insertAdjacentHTML("beforeend",'<a class="tab" id="adminLink" href="admin.html"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>ניהול</a>');moveBall(current,true)});
 }
 // the owner's address is kept only as a hash in this public code; the dashboard itself checks the Claude account
 const OWNER_HASH="01729b4d5d3e455f8bacc0637897aa134b9fb122fc148113f0d0180dfab464f4";
@@ -464,7 +474,7 @@ function personRow(i,p,heats){const opt=(arr,v)=>arr.map(x=>`<option${x===v?" se
 async function eventSheet(post,force,fromPop){
   const ev=post.popup,hs=(Array.isArray(ev.heats)?ev.heats:[]).filter(x=>typeof x==="string"&&x&&x.length<=20).slice(0,6),heats=hs.length?hs:["4 ק״מ"];
   let mine=[];try{mine=await Promise.race([TTCAuth.mySignups(ev.event),new Promise((_,no)=>setTimeout(()=>no(0),5000))])}catch(e){}
-  const img=/^img\/[\w.-]+$/.test(post.img||"")?post.img:"";
+  const img=IMG_OK.test(post.img||"")?post.img:"";
   // organiser's own sign-up file (same link as the poster's QR), offered next to the in-app form
   const ext=/^https:\/\/docs\.google\.com\//.test(post.link||"")?`<a class="btn ghost" style="margin-top:10px" href="${esc(post.link)}" target="_blank" rel="noopener">${esc(post.linkText||"לקובץ ההרשמה של המארגנים")}</a>`:"";
   if(mine.length){if(!force)return;openSheet(`${img?`<img class="post-img" src="${img}" alt="">`:""}<h2 class="post-h">${esc(post.title)}</h2><div class="post-t">אתם רשומים ✅\n${mine.map(m=>`${esc(m.firstName)} ${esc(m.lastName)} · ${esc(m.heat)}`).join("\n")}</div>${ext}<button class="linkbtn" id="evCancel" type="button">ביטול ההרשמה</button>`);
@@ -498,7 +508,7 @@ async function eventSheet(post,force,fromPop){
 }
 let popReturn=null;
 let popAction=null,popLaterFn=null;
-function showPop(post,opts={}){const img=opts.img||(/^img\/[\w.-]+$/.test(post.img||"")?post.img:"");$("#popGo").textContent=opts.go||"להרשמה";popAction=opts.action||null;popLaterFn=opts.later||null;
+function showPop(post,opts={}){const img=opts.img||(IMG_OK.test(post.img||"")?post.img:"");$("#popGo").textContent=opts.go||"להרשמה";popAction=opts.action||null;popLaterFn=opts.later||null;
   $("#popImg").hidden=!img;if(img)$("#popImg").src=img;$("#popT").textContent=post.title||"";$("#popTx").textContent=post.text||"";
   popReturn=document.activeElement;const el=$("#pop");el.hidden=false;el.classList.add("on");requestAnimationFrame(()=>$("#popCard").focus({preventScroll:true}));track("post","popup:"+(post.popup?post.popup.event:"invite"))}
 function hidePop(){const el=$("#pop");el.hidden=true;el.classList.remove("on");popReturn&&popReturn.focus&&popReturn.focus({preventScroll:true})}

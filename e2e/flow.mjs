@@ -2,6 +2,7 @@
 // with the production firestore.rules. Run by .github/workflows/e2e.yml.
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 
 const APP = "http://127.0.0.1:8000/";
 const DB = "http://127.0.0.1:8080/v1/projects/demo-ttcmh/databases/(default)/documents";
@@ -102,10 +103,76 @@ async function kid() {
   await ctx.close();
 }
 
+// admin page: only the owner (checked by the Firestore rules, not just the page) can read or act
+const OWNER_EMAIL = "owner-e2e@example.com";
+const admin_h = { Authorization: "Bearer owner" };
+const PNG = "iVBORw0KGgoAAAANSUhEUgAAACgAAAAeCAIAAADRv8uKAAAAL0lEQVR4nO3NIQEAMAgAsHNBLGrQvwkVcJitwKI634V/sorFYrFYLBaLxWKxeGUATQQA1+P4o08AAAAASUVORK5CYII=";
+async function signInAdmin(page, email, name) {
+  await page.waitForFunction(() => typeof TTCAuth !== "undefined" && TTCAuth.admin, null, { timeout: 15000 });
+  const [pop] = await Promise.all([page.waitForEvent("popup"), page.click("#in")]);
+  await pop.waitForLoadState(); await pop.getByText("Add new account").click();
+  await pop.locator("#email-input").fill(email); await pop.locator("#display-name-input").fill(name);
+  await pop.getByText("Sign in with Google.com").click(); await pop.waitForEvent("close", { timeout: 15000 }).catch(() => {});
+}
+async function adminFlow() {
+  step = "admin-seed";
+  const r = await fetch(`${DB}/system/boardOwner`, { method: "PATCH", headers: { ...admin_h, "content-type": "application/json" },
+    body: JSON.stringify({ fields: { hash: { stringValue: createHash("sha256").update(OWNER_EMAIL).digest("hex") } } }) });
+  assert.ok(r.ok, "seed owner doc");
+
+  step = "admin-stranger"; let ctx = await browser.newContext({ viewport: { width: 390, height: 844 } }); let page = await ctx.newPage();
+  page.on("pageerror", (e) => errors.push(`admin: ${e.message}`));
+  await page.goto(APP + "admin.html"); await page.waitForSelector("#in", { timeout: 15000 });
+  await signInAdmin(page, "stranger@example.com", "זר");
+  await page.waitForSelector("text=הדף הזה פרטי", { timeout: 10000 });
+  const code = await page.evaluate(() => TTCAuth.admin.members().then(() => "read!").catch((e) => e.code));
+  assert.equal(code, "permission-denied", "a stranger who bypasses the page is refused by the server");
+  const code2 = await page.evaluate(() => TTCAuth.admin.push("x", "y", "").then(() => "sent!").catch((e) => e.code));
+  assert.equal(code2, "permission-denied"); ok("ניהול: חשבון אחר רואה 'הדף הזה פרטי', והשרת חוסם אותו גם בעקיפת הדף");
+  await ctx.close();
+
+  step = "admin-owner"; ctx = await browser.newContext({ viewport: { width: 390, height: 844 } }); page = await ctx.newPage();
+  page.on("pageerror", (e) => errors.push(`admin: ${e.message}`));
+  await page.goto(APP + "admin.html"); await page.waitForSelector("#in", { timeout: 15000 });
+  await signInAdmin(page, OWNER_EMAIL, "שלום");
+  await page.waitForSelector("#new", { timeout: 15000 }); await page.screenshot({ path: "shots/admin-1-posts.png" });
+  await page.click("#new");
+  await page.fill("#fT", "אימון פתוח בשבת"); await page.fill("#fX", "בואו עם חברים");
+  await page.setInputFiles("#fI", { name: "p.png", mimeType: "image/png", buffer: Buffer.from(PNG, "base64") });
+  await page.waitForSelector("#fIP img", { timeout: 10000 });
+  await page.check("#fE"); await page.fill("#fHe", "4 ק״מ (משפחות), 10 ק״מ");
+  await page.screenshot({ path: "shots/admin-2-form.png", fullPage: true });
+  await page.click("#fS"); await page.waitForSelector("#new", { timeout: 15000 });
+  const posts = await docs("boardPosts"); const mine = posts.find((d) => field(d, "title") === "אימון פתוח בשבת");
+  if (!mine) throw new Error("post not saved: " + (await page.textContent("#fErr").catch(() => "")));
+  assert.ok(field(mine, "img"), "image linked");
+  assert.equal(mine.fields.popup.mapValue.fields.event.stringValue, "crane-2026");
+  ok("ניהול: הבעלים מפרסם עדכון עם תמונה וחלון הרשמה");
+
+  step = "admin-push"; await page.click("[data-tab=push]"); await page.waitForSelector("#pT");
+  await page.fill("#pT", "האימון היום בוטל"); await page.click("#pGo"); await page.click("#pYes");
+  await page.waitForFunction(() => /ממתין לשליחה/.test(document.body.textContent), null, { timeout: 10000 });
+  assert.equal((await docs("pushRequests")).length, 1); ok("ניהול: התראה נכנסת לתור השליחה");
+
+  step = "admin-members"; await page.click("[data-tab=members]");
+  await page.waitForFunction(() => +(document.querySelector("#mT")?.textContent) >= 1, null, { timeout: 10000 });
+  await page.screenshot({ path: "shots/admin-3-members.png" }); ok("ניהול: רשימת הנרשמים נטענת");
+  step = "admin-signups"; await page.click("[data-tab=signups]"); await page.waitForSelector("#sl .card", { timeout: 10000 }); ok("ניהול: מסך ההרשמות נטען");
+  await ctx.close();
+
+  step = "portal-shows-post"; ctx = await browser.newContext({ viewport: { width: 390, height: 844 } }); page = await ctx.newPage();
+  await page.goto(APP); await page.waitForSelector("#gate:not([hidden])", { timeout: 10000 }); await page.click("#gateKid");
+  await page.waitForFunction(() => /אימון פתוח בשבת/.test(document.querySelector("#newsRail")?.textContent || ""), null, { timeout: 15000 });
+  assert.ok(await page.$('#newsRail img[src^="data:image/jpeg"]'), "picture from the admin page shows in the portal");
+  await page.screenshot({ path: "shots/admin-4-portal.png" }); ok("הפורטל מציג את העדכון החדש עם התמונה");
+  await ctx.close();
+}
+
 try {
   await kid();
   await run({ width: 390, height: 844 }, "android");
   await run({ width: 375, height: 667 }, "small");
+  await adminFlow();
   assert.deepEqual(errors, [], "no page errors");
   console.log("\nכל הבדיקות עברו");
 } catch (e) {

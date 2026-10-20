@@ -5,6 +5,10 @@ on:
   push:
     branches: [main, e2e]
   workflow_dispatch:
+    inputs:
+      rules_ref:
+        description: "branch of the attendance repo to take firestore.rules from"
+        default: main
 permissions:
   contents: read
 jobs:
@@ -18,15 +22,17 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 21 }
       - name: Rules from the attendance repo
-        run: curl -fsSL https://raw.githubusercontent.com/shahar1987/ttc-mvh-attendance/main/firestore.rules -o e2e/firestore.rules
+        run: curl -fsSL "https://raw.githubusercontent.com/shahar1987/ttc-mvh-attendance/${{ inputs.rules_ref || 'main' }}/firestore.rules" -o e2e/firestore.rules
       - name: Tools
         working-directory: e2e
         run: npm i --no-audit --no-fund --no-save firebase-tools@14 playwright@1.48.2 && npx playwright install --with-deps chromium
       - name: Site wired to the emulators
         run: |
           mkdir site && cp -r *.html *.js *.json *.png *.css fonts img site/ 2>/dev/null || true
-          cp e2e/auth-e2e.js site/auth.js
-          sed -i "s#connect-src 'self'#connect-src 'self' http://127.0.0.1:9099 http://127.0.0.1:8080#; s#frame-src #frame-src http://127.0.0.1:9099 #" site/index.html
+          cp e2e/auth-e2e.js site/auth.js && cp e2e/auth-e2e.js site/auth-admin.js
+          sed -i "s#connect-src 'self'#connect-src 'self' http://127.0.0.1:9099 http://127.0.0.1:8080#; s#frame-src #frame-src http://127.0.0.1:9099 #" site/index.html site/admin.html
+          sed -i "s#https://firestore.googleapis.com/v1/projects/ttcmh-2a752#http://127.0.0.1:8080/v1/projects/demo-ttcmh#g" site/app.js
+          H=$(printf %s owner-e2e@example.com | sha256sum | cut -d' ' -f1); sed -i "s#const OWNER_HASH = \"[0-9a-f]*\"#const OWNER_HASH = \"$H\"#" site/admin.js
           (cd site && python3 -m http.server 8000 >/dev/null 2>&1 &)
       - name: Run
         working-directory: e2e
