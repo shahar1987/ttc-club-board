@@ -341,6 +341,13 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
 .stagger>*:nth-child(2){animation-delay:.06s}.stagger>*:nth-child(3){animation-delay:.12s}.stagger>*:nth-child(4){animation-delay:.18s}.stagger>*:nth-child(5){animation-delay:.24s}.stagger>*:nth-child(6){animation-delay:.3s}
 @keyframes rise{from{opacity:0;transform:translateY(12px)}}
 /* opening: a ball drops onto the table line, the crest springs up where it lands, then the club name */
+.gate{position:absolute;inset:0;z-index:28;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px 24px calc(env(safe-area-inset-bottom,0px) + 24px);text-align:center;animation:rise .45s var(--ease) both}
+.gate img{width:150px;height:auto}
+.gate h1{font-family:var(--display);font-size:24px;color:var(--green);margin:4px 0 0}
+.gate p{color:var(--muted);font-size:15px;max-width:300px;margin:0;line-height:1.5}
+.gate .gbtn{font-size:16px;min-height:52px;padding:10px 22px;border-radius:16px;margin-top:8px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.gate .fine{position:absolute;inset:auto 24px calc(env(safe-area-inset-bottom,0px) + 20px);font-size:12.5px;color:var(--muted)}
+.gate .fine a{color:inherit}
 .splash{position:absolute;inset:0;z-index:50;background:#fff;display:grid;place-items:center;transition:opacity .5s var(--ease),visibility .5s}
 .splash.gone{opacity:0;visibility:hidden}
 .splash.gone .intro{transform:scale(1.06);transition:transform .5s var(--ease)}
@@ -379,6 +386,7 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
 <body>
 <div class="app" id="app">
 
+<div class="gate" id="gate" role="dialog" aria-modal="true" aria-labelledby="gateT" hidden><img src="logo.png" alt="לוגו המועדון" width="150" height="153"><h1 id="gateT">ברוכים הבאים למועדון</h1><p id="gateTx">משחקים, ליגות, דירוג ועדכונים מהמועדון. נכנסים פעם אחת עם חשבון Google, וזהו.</p><button class="gbtn" id="gateIn" type="button"></button><div class="fine">בכניסה אתם מאשרים את <a href="terms.html">תנאי השימוש</a> ואת <a href="privacy.html">מדיניות הפרטיות</a></div></div>
 <div class="splash" id="splash" aria-hidden="true"><div class="intro"><div class="stage"><span class="ln"></span><img src="logo.png" alt="" width="220" height="225"><span class="b"></span></div></div></div>
 
 <!-- HOME -->
@@ -496,6 +504,6 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
 <div class="toast" id="toast" role="status"></div>
 </div>
 
-<script src="app.js?v=20261020154444" defer></script>
+<script src="app.js?v=20261020160221" defer></script>
 </body>
 </html>

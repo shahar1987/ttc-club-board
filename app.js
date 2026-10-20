@@ -353,8 +353,8 @@ const GICON='<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
 let ME={user:null,member:null,ready:false};
 const PHONE_OK=v=>/^(\+?972|0)5\d{8}$/.test(v.replace(/[\s-]/g,""));
 function renderMe(){
-  const el=$("#me");$("#meSec").hidden=false;const al=$("#adminLink");al&&al.remove();
-  if(!ME.user){el.innerHTML=`<div class="tx"><b>האזור האישי</b>התחברו כדי שנזהה אתכם במועדון ונעדכן אתכם. הצפייה באפליקציה פתוחה גם בלי.</div><button class="gbtn" id="gIn" type="button">${GICON}כניסה</button>`;if(pushAsk())el.insertAdjacentHTML("beforeend",'<button class="btn invite" id="pushOn" type="button">🔔 לקבל התראות מהמועדון</button>');return}
+  gate();const el=$("#me");$("#meSec").hidden=false;const al=$("#adminLink");al&&al.remove();
+  if(!ME.user){el.innerHTML=`<div class="tx"><b>האזור האישי</b>התחברו עם Google כדי להמשיך.</div><button class="gbtn" id="gIn" type="button">${GICON}כניסה</button>`;if(pushAsk())el.insertAdjacentHTML("beforeend",'<button class="btn invite" id="pushOn" type="button">🔔 לקבל התראות מהמועדון</button>');return}
   if(!ME.member){el.innerHTML=`<div class="tx"><b>עוד צעד קטן</b>נשאר רק להוסיף טלפון.</div><button class="btn" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">השלמה</button>`;return}
   el.innerHTML=`<div class="tx"><b>${esc(ME.member.name)}</b>מחובר/ת · ${esc(ME.user.email)}</div><button class="btn ghost" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">הפרטים שלי</button>`;
   el.insertAdjacentHTML("beforeend",'<button class="btn invite" id="invite" type="button">🎁 להזמין חבר/ה לאימון ניסיון</button>');
@@ -364,13 +364,20 @@ function renderMe(){
 // the owner's address is kept only as a hash in this public code; the dashboard itself checks the Claude account
 const OWNER_HASH="01729b4d5d3e455f8bacc0637897aa134b9fb122fc148113f0d0180dfab464f4";
 async function isOwner(email){try{const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode((email||"").trim().toLowerCase()));return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("")===OWNER_HASH}catch(e){return false}}
+// sign-in is the way in: the gate covers the app until the visitor is signed in with Google and has saved name + phone
+function gate(force){const g=$("#gate"),b=$("#gateIn");if(!g||!(ME.ready||force))return;
+  const open=!(ME.user&&ME.member);store.set("ttc_m",open?null:"1");
+  if(!open){g.hidden=true;return}
+  b.innerHTML=ME.user?"להשלמת הפרטים":GICON+"כניסה עם Google";b.dataset.step=ME.user?"more":"in";
+  $("#gateTx").textContent=ME.user?"נשאר רק שם וטלפון, כדי שנזהה אתכם במועדון.":"משחקים, ליגות, דירוג ועדכונים מהמועדון. נכנסים פעם אחת עם חשבון Google, וזהו.";
+  g.hidden=false}
 function memberSheet(){
   const m=ME.member,isNew=!m;
-  openSheet(`<h2 class="post-h">${isNew?"הצטרפות לאזור האישי":"הפרטים שלי"}</h2>
+  openSheet(`<h2 class="post-h">${isNew?"כמעט בפנים":"הפרטים שלי"}</h2>
   <form class="form" id="mForm" novalidate>
     <label>שם מלא<input type="text" id="mName" maxlength="80" autocomplete="name" value="${esc(m?m.name:ME.user.name)}" required></label>
     <label>טלפון נייד<input type="tel" id="mPhone" maxlength="20" inputmode="tel" autocomplete="tel" placeholder="050-0000000" value="${esc(m?m.phone:"")}" required></label>
-    <div class="why">למה צריך: כדי לזהות אתכם כשחקנים או כהורים במועדון וליצור קשר בענייני המועדון. רק מנהל המועדון רואה את הפרטים (מי שמזמין חברים עשוי להופיע ב"גביע החברים" בשם פרטי ואות). אין חובה למסור אותם, ולא נשלח פרסומות. <a href="privacy.html">מדיניות הפרטיות</a></div>
+    <div class="why">למה צריך: כדי לזהות אתכם כשחקנים או כהורים במועדון וליצור קשר בענייני המועדון. רק מנהל המועדון רואה את הפרטים (מי שמזמין חברים עשוי להופיע ב"גביע החברים" בשם פרטי ואות). אין חובה חוקית למסור אותם, אבל בלעדיהם אי אפשר להיכנס לאפליקציה. לא נשלח פרסומות. <a href="privacy.html">מדיניות הפרטיות</a></div>
     <label class="chk"><input type="checkbox" id="mOk" ${m?"checked":""}><span>אני בן/בת 18 ומעלה (הורה או שחקן בוגר), קראתי את <a href="privacy.html">מדיניות הפרטיות</a> ואני מסכים/ה שהפרטים יישמרו לצורך זה</span></label>
     <div class="err" id="mErr" role="alert"></div>
     <button class="btn" type="submit" id="mSave">${isNew?"שמירה":"שמירת שינויים"}</button>
@@ -388,10 +395,11 @@ function memberSheet(){
     catch(err){$("#mSave").disabled=false;$("#mErr").textContent="לא הצלחנו לשמור. בדקו את החיבור ונסו שוב."}};
   $("#mOut").onclick=async()=>{await TTCAuth.signOut();closeSheet();toast("התנתקת")};
   if(m)$("#mDel").onclick=async()=>{if(!confirm("למחוק את הפרטים שלך מהמועדון? אפשר להירשם שוב בכל זמן."))return;
-    try{await TTCAuth.deleteMember();ME.member=null;closeSheet();toast("הפרטים נמחקו")}catch(e){$("#mErr").textContent="המחיקה לא הצליחה. נסו שוב."}};
+    try{await TTCAuth.deleteMember();ME.member=null;closeSheet();renderMe();toast("הפרטים נמחקו")}catch(e){$("#mErr").textContent="המחיקה לא הצליחה. נסו שוב."}};
 }
 document.addEventListener("click",async e=>{
-  if(e.target.closest("#gIn")){
+  if(e.target.closest("#gateIn")&&$("#gateIn").dataset.step==="more")return memberSheet();
+  if(e.target.closest("#gIn,#gateIn")){
     if(inApp)return openSheet(`<h2 class="post-h">קודם פותחים בדפדפן</h2><div class="post-t">גוגל לא מאפשרת להתחבר מתוך פייסבוק או אינסטגרם.
 1. לוחצים על שלוש הנקודות למעלה.
 2. בוחרים "פתיחה בדפדפן".
@@ -402,12 +410,13 @@ document.addEventListener("click",async e=>{
   if(e.target.closest("#meEdit"))memberSheet();
 });
 function startAuth(){
-  addEventListener("ttc-auth-ready",()=>TTCAuth.onUser(async u=>{ME.user=u;ME.member=null;
+  addEventListener("ttc-auth-ready",()=>TTCAuth.onUser(async u=>{ME.user=u;ME.member=null;ME.ready=true;
     if(u){try{ME.member=await TTCAuth.getMember()}catch(e){}}
     renderMe();if(u&&!ME.member&&sheet.hidden)memberSheet();else setTimeout(maybePopup,600)}),{once:true});
   const sc=document.createElement("script");sc.src="auth.js?v="+(BUILD||"1");sc.defer=true;document.head.appendChild(sc);
 }
 const SIGNIN_ON=true;
+if(SIGNIN_ON&&!store.get("ttc_m"))introDone.then(()=>{if(!(ME.user&&ME.member))gate(true)});
 if(SIGNIN_ON){introDone.then(()=>setTimeout(startAuth,300));addEventListener("load",()=>{try{renderMe()}catch(e){}})} // card shows at once; fills in when sign-in state is known
 
 /* ---------- event popup: after a member finished joining, an active event post pops up once with one-tap registration ---------- */
