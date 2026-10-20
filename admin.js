@@ -10,7 +10,7 @@ const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).
 const fmtDate = (v) => { const t = v && (typeof v.toDate === "function" ? v.toDate() : new Date(v)); return t && !isNaN(t) ? t.toLocaleString("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) : ""; };
 const GICON = '<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
 
-let USER = null, TAB = "posts", A = null;
+let USER = null, TAB = "posts", A = null, ROLE = "owner";
 const main = $("#main");
 let toastT;
 function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2600); }
@@ -34,20 +34,24 @@ function notOwner() {
   main.innerHTML = `<div class="center screen"><img src="logo.png" alt=""><h2>הדף הזה פרטי</h2><div class="muted">אין לחשבון הזה גישה לניהול.</div><div class="row" style="justify-content:center"><a class="btn ghost" href="./" style="display:inline-flex;align-items:center;text-decoration:none">לפורטל</a><button class="btn ghost" id="out" type="button">התנתקות</button></div></div>`;
   $("#out").onclick = () => TTCAuth.signOut();
 }
-const TABS = [["posts", "📝", "עדכונים"], ["push", "🔔", "התראה"], ["members", "👥", "נרשמים"], ["signups", "🏃", "הרשמות"], ["more", "⋯", "עוד"]];
+const ALL_TABS = [["posts", "📝", "עדכונים"], ["push", "🔔", "התראה"], ["members", "👥", "נרשמים"], ["signups", "🏃", "הרשמות"], ["managers", "🔑", "מנהלים"], ["more", "⋯", "עוד"]];
+// a manager publishes and edits updates only (the rules enforce the same)
+let TABS = ALL_TABS;
 function tabs() {
   const bar = $("#tabbar"); bar.hidden = false;
   bar.innerHTML = TABS.map(([k, i, l]) => `<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${k === TAB}"><span class="ic" aria-hidden="true">${i}</span>${l}</button>`).join("");
 }
 document.addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) go(b.dataset.tab); });
-function go(t) { TAB = t; tabs(); try { history.replaceState(null, "", "#" + t); } catch (e) {} ({ posts, push, members, signups, more })[t](); scrollTo(0, 0); }
+function go(t) { if (!TABS.some((x) => x[0] === t)) t = "posts"; TAB = t; tabs(); try { history.replaceState(null, "", "#" + t); } catch (e) {} ({ posts, push, members, signups, managers, more })[t](); scrollTo(0, 0); }
 
 addEventListener("ttc-auth-ready", () => {
   A = TTCAuth.admin;
   TTCAuth.onUser(async (u) => {
     USER = u;
     if (!u) return signedOut();
-    if (!(await isOwner(u.email))) return notOwner();
+    if (await isOwner(u.email)) { ROLE = "owner"; TABS = ALL_TABS; }
+    else if (await TTCAuth.isManager()) { ROLE = "manager"; TABS = ALL_TABS.filter((x) => x[0] === "posts" || x[0] === "more"); }
+    else return notOwner();
     const h = (location.hash || "").slice(1);
     go(TABS.some((t) => t[0] === h) ? h : "posts");
   });
@@ -193,9 +197,45 @@ async function members() {
     const q = $("#q").value.trim().toLowerCase();
     const l = list.filter((m) => !q || (m.name || "").toLowerCase().includes(q) || (m.phone || "").includes(q.replace(/\D/g, "")));
     $("#ml").innerHTML = l.map((m) => `<div class="card"><div class="row" style="justify-content:space-between"><b>${esc(m.name)}</b><span class="tag ${!m.match ? "off" : m.match.status === "matched" ? "" : "bad"}">${!m.match ? "בבדיקה" : m.match.status === "matched" ? "נמצא ✓" : "לא נמצא"}</span></div>
-      <div class="muted"><a href="tel:${esc(m.phone)}" dir="ltr">${esc(m.phone)}</a> · ${esc(m.email)}</div><div class="muted">${esc(fmtDate(m.createdAt))}${m.ref ? " · הגיע/ה דרך הזמנה" : ""}</div></div>`).join("") || '<div class="card muted">אין תוצאות.</div>';
+      <div class="muted"><a href="tel:${esc(m.phone)}" dir="ltr">${esc(m.phone)}</a> · ${esc(m.email)}</div><div class="muted">${esc(fmtDate(m.createdAt))}${m.ref ? " · הגיע/ה דרך הזמנה" : ""}</div>
+      <div class="row" style="margin-top:8px"><button class="btn ghost" style="min-height:38px" data-medit="${esc(m.id)}" type="button">עריכה</button><button class="btn ghost" style="min-height:38px" data-mmgr="${esc(m.id)}" type="button">להפוך למנהל</button><button class="btn warn" style="min-height:38px" data-mdel="${esc(m.id)}" type="button">מחיקה</button></div></div>`).join("") || '<div class="card muted">אין תוצאות.</div>';
   };
   $("#q").oninput = draw; draw();
+  main.onclick = async (e) => {
+    const ed = e.target.closest("[data-medit]"), de = e.target.closest("[data-mdel]"), mg = e.target.closest("[data-mmgr]");
+    const m = list.find((x) => x.id === (ed || de || mg || {}).dataset?.[ed ? "medit" : de ? "mdel" : "mmgr"]);
+    if (!m) return;
+    if (ed) {
+      const name = prompt("שם מלא", m.name || ""); if (name === null) return;
+      const phone = prompt("טלפון נייד", m.phone || ""); if (phone === null) return;
+      const ph = phone.replace(/[\s-]/g, "");
+      if (!name.trim() || !/^(\+?972|0)5\d{8}$/.test(ph)) return toast("שם או טלפון לא תקינים");
+      await run(() => A.updateMember(m.id, { name: name.trim().slice(0, 80), phone: ph }), "הפרטים עודכנו"); members();
+    }
+    if (de) { if (!confirm(`למחוק את ${m.name} מהנרשמים? הוא יתבקש להירשם שוב בכניסה הבאה.`)) return; await run(() => A.deleteMember(m.id), "נמחק"); members(); }
+    if (mg) { if (!m.email) return toast("אין לנרשם הזה כתובת ג'ימייל"); if (!confirm(`להפוך את ${m.name} למנהל? הוא יוכל לפרסם ולערוך עדכונים בפורטל.`)) return; await run(() => A.addManager(m.email, (m.name || "").slice(0, 60)), "נוסף כמנהל"); }
+  };
+}
+
+/* ---------- managers (boardManagers): owner only ---------- */
+async function managers() {
+  main.onclick = null;
+  main.innerHTML = `<section class="screen"><h2>מנהלים</h2><div class="card muted" style="background:var(--tint);border:0">מנהל יכול לפרסם ולערוך עדכונים בפורטל. הוא לא רואה נרשמים, טלפונים או הרשמות, ולא שולח התראות. הוא נכנס עם חשבון הג'ימייל שהוספת כאן.</div>
+    <form class="form card" id="mf" novalidate><label>כתובת ג'ימייל<input type="text" id="mE" inputmode="email" dir="ltr" placeholder="name@gmail.com"></label><label>שם<input type="text" id="mN" maxlength="60"></label><div class="err" id="mErr" role="alert"></div><button class="btn" type="submit">הוספת מנהל</button></form>
+    <div id="mgl" class="list"><div class="muted">טוען…</div></div></section>`;
+  const load = async () => {
+    let l = [];
+    try { l = await run(() => A.managers()); } catch (e) { $("#mgl").innerHTML = '<div class="err">לא הצלחנו לטעון.</div>'; return; }
+    $("#mgl").innerHTML = l.length ? l.map((m) => `<div class="card"><div class="row" style="justify-content:space-between"><div><b>${esc(m.name || "")}</b><div class="muted" dir="ltr" style="text-align:right">${esc(m.email)}</div></div><button class="btn warn" style="min-height:38px" data-rm="${esc(m.email)}" type="button">הסרה</button></div></div>`).join("") : '<div class="card muted">עוד אין מנהלים חוץ ממך.</div>';
+  };
+  load();
+  $("#mf").onsubmit = async (e) => {
+    e.preventDefault(); const em = $("#mE").value.trim().toLowerCase(), nm = $("#mN").value.trim();
+    if (!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(em)) return ($("#mErr").textContent = "כתובת לא תקינה.");
+    $("#mErr").textContent = "";
+    try { await run(() => A.addManager(em, nm.slice(0, 60)), "נוסף כמנהל"); $("#mE").value = $("#mN").value = ""; load(); } catch (x) {}
+  };
+  main.onclick = async (e) => { const b = e.target.closest("[data-rm]"); if (!b) return; if (!confirm(`להסיר את ${b.dataset.rm} מהמנהלים?`)) return; await run(() => A.removeManager(b.dataset.rm), "הוסר"); load(); };
 }
 
 /* ---------- event signups ---------- */
@@ -224,7 +264,7 @@ function more() {
     <a href="${SIGNUP_SHEET}" target="_blank" rel="noopener">גיליון ההרשמות לאירועים <span>↗</span></a>
     <a href="https://www.tttm.co.il/c/160/" target="_blank" rel="noopener">המועדון באתר האיגוד <span>↗</span></a></div>
     <div class="card"><b>קישור לשליחה להורים ולשחקנים</b><div class="muted" dir="ltr" style="text-align:left;margin:6px 0">${url}</div><button class="btn" id="cp" type="button">העתקת הקישור</button></div>
-    <div class="card muted">תוצאות, טבלאות ודירוג מתעדכנים לבד מאתר האיגוד. מחובר/ת כ-${esc(USER.email)}</div>
+    <div class="card muted">תוצאות, טבלאות ודירוג מתעדכנים לבד מאתר האיגוד. מחובר/ת כ-${esc(USER.email)}${ROLE === "manager" ? " (מנהל: פרסום ועריכת עדכונים)" : ""}</div>
     <button class="btn ghost" id="out" type="button">התנתקות</button></section>`;
   $("#cp").onclick = async () => { try { await navigator.clipboard.writeText(url); toast("הקישור הועתק"); } catch (e) { toast(url); } };
   $("#out").onclick = () => TTCAuth.signOut();

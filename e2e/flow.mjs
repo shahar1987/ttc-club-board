@@ -160,7 +160,22 @@ async function adminFlow() {
   await page.waitForSelector("#ml .card b", { timeout: 10000 });
   await page.screenshot({ path: "shots/admin-3-members.png" }); ok("ניהול: רשימת הנרשמים נטענת");
   step = "admin-signups"; await page.click("[data-tab=signups]"); await page.waitForSelector("#sl .card", { timeout: 10000 }); ok("ניהול: מסך ההרשמות נטען");
+  step = "admin-add-manager"; await page.click("[data-tab=managers]"); await page.waitForSelector("#mE");
+  await page.fill("#mE", "mgr-e2e@example.com"); await page.fill("#mN", "עוזר"); await page.click("#mf button[type=submit]");
+  await page.waitForSelector("#mgl >> text=mgr-e2e@example.com", { timeout: 10000 }); ok("ניהול: הבעלים מוסיף מנהל");
   await ctx.close();
+
+  step = "manager"; ctx = await browser.newContext({ viewport: { width: 390, height: 844 } }); page = await ctx.newPage();
+  page.on("pageerror", (e) => errors.push(`manager: ${e.message}`));
+  await page.goto(APP + "admin.html"); await page.waitForSelector("#in", { timeout: 15000 });
+  await signInAdmin(page, "mgr-e2e@example.com", "עוזר");
+  await page.waitForSelector("#new", { timeout: 15000 });
+  assert.deepEqual(await page.$$eval("#tabbar .tab", (t) => t.map((x) => x.dataset.tab)), ["posts", "more"], "a manager sees updates only");
+  await page.click("#new"); await page.fill("#fT", "עדכון ממנהל"); await page.click("#fS"); await page.waitForSelector("#new", { timeout: 15000 });
+  assert.ok((await docs("boardPosts")).some((d) => field(d, "title") === "עדכון ממנהל"), "manager post saved");
+  assert.equal(await page.evaluate(() => TTCAuth.admin.members().then(() => "read!").catch((e) => e.code)), "permission-denied", "manager cannot read members");
+  ok("מנהל: מפרסם עדכון, ולא רואה נרשמים"); await ctx.close();
+
 
   step = "portal-shows-post"; ctx = await browser.newContext({ viewport: { width: 390, height: 844 } }); page = await ctx.newPage();
   await page.goto(APP); await page.waitForSelector("#gate:not([hidden])", { timeout: 10000 }); await page.click("#gateKid");
