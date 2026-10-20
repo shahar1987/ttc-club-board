@@ -433,7 +433,9 @@ async function eventSheet(post,force,fromPop){
   const ev=post.popup,hs=(Array.isArray(ev.heats)?ev.heats:[]).filter(x=>typeof x==="string"&&x&&x.length<=20).slice(0,6),heats=hs.length?hs:["4 ק״מ"];
   let mine=[];try{mine=await TTCAuth.mySignups(ev.event)}catch(e){}
   const img=/^img\/[\w.-]+$/.test(post.img||"")?post.img:"";
-  if(mine.length){if(!force)return;openSheet(`${img?`<img class="post-img" src="${img}" alt="">`:""}<h2 class="post-h">${esc(post.title)}</h2><div class="post-t">אתם רשומים ✅\n${mine.map(m=>`${esc(m.firstName)} ${esc(m.lastName)} · ${esc(m.heat)}`).join("\n")}</div><button class="linkbtn" id="evCancel" type="button">ביטול ההרשמה</button>`);
+  // organiser's own sign-up file (same link as the poster's QR), offered next to the in-app form
+  const ext=/^https:\/\/docs\.google\.com\//.test(post.link||"")?`<a class="btn ghost" style="margin-top:10px" href="${esc(post.link)}" target="_blank" rel="noopener">${esc(post.linkText||"לקובץ ההרשמה של המארגנים")}</a>`:"";
+  if(mine.length){if(!force)return;openSheet(`${img?`<img class="post-img" src="${img}" alt="">`:""}<h2 class="post-h">${esc(post.title)}</h2><div class="post-t">אתם רשומים ✅\n${mine.map(m=>`${esc(m.firstName)} ${esc(m.lastName)} · ${esc(m.heat)}`).join("\n")}</div>${ext}<button class="linkbtn" id="evCancel" type="button">ביטול ההרשמה</button>`);
     $("#evCancel").onclick=async()=>{if(!confirm("לבטל את ההרשמה של כל המשתתפים?"))return;try{await TTCAuth.cancelSignups(ev.event);closeSheet();toast("ההרשמה בוטלה")}catch(e){toast("הביטול לא הצליח")}};return}
   const nm=(ME.member.name||"").trim().split(/\s+/),me={firstName:nm[0]||"",lastName:nm.slice(1).join(" ")};
   openSheet(`${img&&!fromPop?`<img class="post-img" src="${img}" alt="">`:""}<h2 class="post-h">${fromPop?"הרשמה · ":""}${esc(post.title)}</h2>${post.text&&!fromPop?`<div class="post-t">${esc(post.text)}</div>`:""}
@@ -443,7 +445,7 @@ async function eventSheet(post,force,fromPop){
     <label>עיר / יישוב<input type="text" id="evCity" maxlength="40" autocomplete="address-level2"></label>
     <div class="why">הפרטים נשלחים למנהל המועדון לצורך ההרשמה לאירוע. אין צורך בתעודת זהות כאן — אם המארגנים יבקשו, ניצור קשר. הטלפון והמייל נלקחים מהאזור האישי.</div>
     <div class="err" id="evErr" role="alert"></div>
-    <button class="btn" type="submit" id="evSave">להרשמה</button>
+    <button class="btn" type="submit" id="evSave">להרשמה</button>${ext}
     <button class="linkbtn" type="button" id="evLater" style="color:var(--muted)">לא עכשיו</button>
   </form>`);
   const rows=$("#ppRows");
