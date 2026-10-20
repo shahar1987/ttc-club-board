@@ -14,10 +14,12 @@ const browser = await chromium.launch();
 const errors = [];
 let step = "start";
 // logs are read through annotations (the raw log download is not reachable from every tool)
+// waitForFunction polls with eval, which the page's CSP blocks; evaluate() does not
+async function until(page, fn, ms = 15000) { for (const t = Date.now(); Date.now() - t < ms; await page.waitForTimeout(200)) if (await page.evaluate(fn).catch(() => false)) return; throw new Error("timed out waiting"); }
 const ok = (m) => console.log("::notice::✓ " + m);
 
 async function signIn(page, email, name) {
-  await page.waitForFunction(() => typeof ME !== "undefined" && ME.ready, null, { timeout: 15000 });
+  await until(page, () => typeof ME !== "undefined" && ME.ready);
   const [pop] = await Promise.all([page.waitForEvent("popup"), page.click("#gateIn")]);
   await pop.waitForLoadState();
   await pop.getByText("Add new account").click();
@@ -108,7 +110,7 @@ const OWNER_EMAIL = "owner-e2e@example.com";
 const admin_h = { Authorization: "Bearer owner" };
 const PNG = "iVBORw0KGgoAAAANSUhEUgAAACgAAAAeCAIAAADRv8uKAAAAL0lEQVR4nO3NIQEAMAgAsHNBLGrQvwkVcJitwKI634V/sorFYrFYLBaLxWKxeGUATQQA1+P4o08AAAAASUVORK5CYII=";
 async function signInAdmin(page, email, name) {
-  await page.waitForFunction(() => typeof TTCAuth !== "undefined" && TTCAuth.admin, null, { timeout: 15000 });
+  await until(page, () => typeof TTCAuth !== "undefined" && !!TTCAuth.admin);
   const [pop] = await Promise.all([page.waitForEvent("popup"), page.click("#in")]);
   await pop.waitForLoadState(); await pop.getByText("Add new account").click();
   await pop.locator("#email-input").fill(email); await pop.locator("#display-name-input").fill(name);
