@@ -271,7 +271,23 @@ $("#installBtn").addEventListener("click",async()=>{track("click","install");
   else if(isIOS)openSheet(`<h2 class="post-h">הוספה למסך הבית</h2><div class="post-t">1. לוחצים על כפתור השיתוף בתחתית ספארי (ריבוע עם חץ למעלה).
 2. גוללים ובוחרים "הוספה למסך הבית".
 3. לוחצים "הוסף". האייקון של המועדון יופיע לצד שאר האפליקציות.</div>`)});
-if("serviceWorker" in navigator&&location.protocol==="https:")addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+/* ---------- auto-update: an installed app stays open for days, so check for a new version whenever it comes back to the screen ---------- */
+let BUILD=null,DATA_AT=null;
+async function checkFresh(){
+  try{const[v,d]=await Promise.all([fetch("version.json",{cache:"no-store"}).then(r=>r.json()),fetch("data.json",{cache:"no-store"}).then(r=>r.json())]);
+    if(BUILD===null){BUILD=v.v;DATA_AT=d.updated;return}
+    if(v.v!==BUILD||d.updated!==DATA_AT)location.reload();
+  }catch(e){}
+}
+checkFresh();
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){checkFresh();swReg&&swReg.update().catch(()=>{})}});
+setInterval(()=>{if(document.visibilityState==="visible")checkFresh()},10*60e3);
+let swReg=null;
+if("serviceWorker" in navigator&&location.protocol==="https:"){
+  const had=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had)location.reload()});
+  addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{swReg=r;r.update().catch(()=>{})}).catch(()=>{}));
+}
 
 /* ---------- opening: full intro once per visit, a quick fade when coming back in the same session ---------- */
 const seen=(()=>{try{const v=sessionStorage.getItem("ttc_intro");sessionStorage.setItem("ttc_intro","1");return !!v}catch(e){return false}})();
