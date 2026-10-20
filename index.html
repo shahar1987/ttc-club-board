@@ -175,6 +175,10 @@ table.st{width:100%;border-collapse:collapse;font-size:14px}
 .post .go{justify-self:start;margin-top:4px;background:var(--green);color:#fff;text-decoration:none;border-radius:999px;padding:8px 16px;font-weight:500;font-size:14px}
 .post.pin{border-color:var(--bright);box-shadow:0 0 0 2px color-mix(in srgb,var(--lime) 55%,transparent)}
 .pinmark{display:inline-block;background:var(--lime);color:#16261e;border-radius:6px;font-size:11.5px;font-weight:700;padding:1px 7px;margin-inline-start:6px}
+.notice{background:var(--lime);color:#16261e}
+.notice .wrap{display:flex;gap:10px;align-items:center;padding-block:10px;font-weight:500;font-size:15px}
+.notice .nb{flex:none;background:#16261e;color:var(--lime);border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:700}
+.notice #noticeText{min-width:0;overflow-wrap:anywhere}
 footer{background:var(--beige);margin-top:40px}
 footer .wrap{padding-block:22px 28px;font-size:13px;color:var(--muted);display:grid;gap:8px}
 footer b{color:var(--ink)}
@@ -224,6 +228,7 @@ nav a:active,.chip:active,.seg button:active,.s-btn:active,.events a:active,.aft
   <a href="#social">פייסבוק ואינסטגרם</a>
 </div></nav>
 
+<div id="notice" class="notice" hidden role="status"><div class="wrap"><span class="nb">הודעה</span><span id="noticeText"></span></div></div>
 <section class="band" id="next"><div class="wrap" id="hero">
   <span class="kicker"><span class="dot"></span>טוען את המשחק הבא…</span>
 </div></section>
@@ -381,7 +386,10 @@ function wireNav(){
   document.addEventListener("click",e=>{const b=e.target.closest("[data-pid]");if(b)showPlayer(+b.dataset.pid)});
 }
 function news(ps){
-  ps=(ps||[]).filter(x=>x&&x.title&&!x.hidden).sort((a,b)=>(!!b.pin-!!a.pin)||String(b.date).localeCompare(String(a.date)));
+  ps=(ps||[]).filter(x=>x&&x.title&&!x.hidden);
+  const bn=ps.filter(x=>x.banner).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
+  if(bn){$("#noticeText").textContent=bn.title+(bn.text?" · "+bn.text:"");$("#notice").hidden=false}
+  ps=ps.filter(x=>!x.banner).sort((a,b)=>(!!b.pin-!!a.pin)||String(b.date).localeCompare(String(a.date)));
   if(!ps.length)return;
   const safe=u=>/^(https:\/\/|img\/)/.test(u||"")?u:"";
   $("#posts").innerHTML=ps.map(x=>`<article class="post${x.pin?" pin":""}">${safe(x.img)?`<img src="${esc(x.img)}" alt="" loading="lazy">`:""}<div class="in"><span class="dt num">${x.date?new Date(x.date+"T12:00").toLocaleDateString("he-IL",{day:"numeric",month:"long"}):""}${x.pin?'<span class="pinmark">נעוץ</span>':""}</span><h3>${esc(x.title)}</h3>${x.text?`<p>${esc(x.text)}</p>`:""}${safe(x.link)&&x.link.startsWith("https://")?`<a class="go" href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.linkText||"לפרטים")}</a>`:""}</div></article>`).join("");
