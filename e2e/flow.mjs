@@ -16,6 +16,7 @@ let step = "start";
 const ok = (m) => console.log("::notice::✓ " + m);
 
 async function signIn(page, email, name) {
+  await page.waitForFunction(() => typeof ME !== "undefined" && ME.ready, null, { timeout: 15000 });
   const [pop] = await Promise.all([page.waitForEvent("popup"), page.click("#gateIn")]);
   await pop.waitForLoadState();
   await pop.getByText("Add new account").click();

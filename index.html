@@ -374,7 +374,10 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
   76%{transform:translateY(0) scale(1.15,.85);animation-timing-function:cubic-bezier(0,0,.5,1)}
   86%{transform:translateY(-22px);animation-timing-function:cubic-bezier(.5,0,1,1)}
   100%{transform:translateY(0) scale(0);opacity:0}}
-.splash.quick .stage *{animation-duration:.01ms!important;animation-delay:0s!important}
+/* returning visits: the same ball-and-logo intro, just quicker (about one second) */
+.splash.quick .stage .ln{animation-duration:.3s;animation-delay:0s}
+.splash.quick .stage .b{animation-duration:.6s;animation-delay:.05s}
+.splash.quick .stage img{animation-duration:.5s;animation-delay:.45s}
 @media (prefers-reduced-motion:reduce){.stage img,.intro h1,.intro p{opacity:1!important;transform:none!important}.stage .b{display:none}.stage .ln{transform:none}}
 @keyframes bounce{from{transform:translateY(-36px)}to{transform:translateY(0) scale(1.15,.85)}}
 
@@ -507,6 +510,6 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
 <div class="toast" id="toast" role="status"></div>
 </div>
 
-<script src="app.js?v=20261020184841" defer></script>
+<script src="app.js?v=20261020190231" defer></script>
 </body>
 </html>

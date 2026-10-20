@@ -294,15 +294,15 @@ $("#installBtn").addEventListener("click",async()=>{track("click","install");
 2. בוחרים "התקנת אפליקציה" או "הוספה למסך הבית".
 3. מאשרים. הלוגו של המועדון יופיע במסך הבית.`)});
 /* ---------- auto-update: an installed app stays open for days, so check for a new version whenever it comes back to the screen ---------- */
-let BUILD=null,DATA_AT=null;
+let BUILD=null,DATA_AT=null,SIGNING=false;
 async function checkFresh(){
   const get=u=>fetch(u,{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null);
   const[v,d]=await Promise.all([get("version.json"),get("data.json")]);
   const vv=v&&v.v,du=d&&d.updated;
-  if(BUILD===null){BUILD=vv||"";DATA_AT=du||"";return}
+  if(BUILD===null){if(vv||du){BUILD=vv||"";DATA_AT=du||""}return}
   const changed=(vv&&vv!==BUILD)||(du&&du!==DATA_AT);
   if(!changed)return;
-  if(!sheet.hidden||document.activeElement===$("#q"))return; // busy: try again on the next check
+  if(SIGNING||!sheet.hidden||document.activeElement===$("#q"))return; // busy: try again on the next check
   location.reload();
 }
 checkFresh();
@@ -311,14 +311,14 @@ setInterval(()=>{if(document.visibilityState==="visible")checkFresh()},10*60e3);
 let swReg=null;
 if("serviceWorker" in navigator&&location.protocol==="https:"){
   const had=!!navigator.serviceWorker.controller;
-  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had&&sheet.hidden&&document.activeElement!==$("#q"))location.reload()});
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had&&!SIGNING&&sheet.hidden&&document.activeElement!==$("#q"))location.reload()});
   addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{swReg=r;r.update().catch(()=>{})}).catch(()=>{}));
 }
 
 /* ---------- opening: full intro once per visit, a quick fade when coming back in the same session ---------- */
 const seen=standalone||!!store.get("ttc_intro");store.set("ttc_intro","1");
 if(seen)$("#splash").classList.add("quick");
-const introDone=new Promise(r=>setTimeout(r,seen||RM.matches?150:1900));
+const introDone=new Promise(r=>setTimeout(r,RM.matches?150:seen?1050:1900));
 function hideSplash(){introDone.then(()=>{$("#splash").classList.add("gone");$("#s-home").classList.add("enter-home")})}
 /* ---------- boot ---------- */
 // updates published by staff with the "boardPosts" permission (attendance app) — public read, no sign-in needed
@@ -327,7 +327,7 @@ const tfetch=(u,o={},ms=6000)=>{const c=new AbortController();setTimeout(()=>c.a
 async function staffPosts(){try{
   // only visible posts: the rules refuse anything else to the public
   const r=await tfetch("https://firestore.googleapis.com/v1/projects/ttcmh-2a752/databases/(default)/documents:runQuery?key=AIzaSyCmEVnBSkODaCZyrdEdO0vNQtvOnvgsQiA",{method:"POST",cache:"no-store",headers:{"content-type":"application/json"},
-    body:JSON.stringify({structuredQuery:{from:[{collectionId:"boardPosts"}],where:{fieldFilter:{field:{fieldPath:"hidden"},op:"EQUAL",value:{booleanValue:false}}},limit:100}})},4000);
+    body:JSON.stringify({structuredQuery:{from:[{collectionId:"boardPosts"}],where:{fieldFilter:{field:{fieldPath:"hidden"},op:"EQUAL",value:{booleanValue:false}}},limit:20}})},4000);
   if(!r.ok)return[];const j=await r.json();
   const v=f=>f?(f.stringValue??f.booleanValue??""):"";
   return (Array.isArray(j)?j:[]).map(x=>x.document).filter(Boolean).map(d=>{const f=d.fields||{};return{id:"s:"+d.name.split("/").pop(),title:String(v(f.title)).slice(0,90),text:String(v(f.text)).slice(0,1200),banner:v(f.banner)===true,pin:v(f.pin)===true,hidden:v(f.hidden)===true,link:String(v(f.link)),linkText:String(v(f.linkText)).slice(0,30),date:String(v(f.date))}}).filter(x=>x.title);
@@ -376,7 +376,7 @@ function gate(force){const g=$("#gate"),b=$("#gateIn");if(!g||!(ME.ready||force)
   // under 18: view-only, nothing is collected (sign-in and personal details are for parents and adult players)
   const kid=!ME.user&&store.get("ttc_kid");$("#gateKid").hidden=!!ME.user;
   const open=!(ME.user&&ME.member)&&!kid;store.set("ttc_m",ME.user&&ME.member?"1":null);
-  if(!open){g.hidden=true;return}
+  if(!open){if(!g.hidden){g.hidden=true;const h=$("#s-home");h.classList.remove("enter-home");void h.offsetWidth;h.classList.add("enter-home")}return}
   b.innerHTML=ME.user?"להשלמת הפרטים":GICON+"כניסה עם Google";b.dataset.step=ME.user?"more":"in";
   $("#gateTx").textContent=ME.user?"נשאר רק שם וטלפון, כדי שנזהה אתכם במועדון.":"משחקים, ליגות, דירוג ועדכונים מהמועדון. נכנסים פעם אחת עם חשבון Google, וזהו.";
   g.hidden=false}
@@ -384,7 +384,7 @@ function memberSheet(){
   const m=ME.member,isNew=!m;
   openSheet(`<h2 class="post-h">${isNew?"כמעט בפנים":"הפרטים שלי"}</h2>
   <form class="form" id="mForm" novalidate>
-    <label>שם מלא<input type="text" id="mName" maxlength="80" autocomplete="name" value="${esc(m?m.name:ME.user.name)}" required></label>
+    <label>שם מלא<input type="text" id="mName" maxlength="80" autocomplete="name" value="${esc((m?m.name:ME.user.name)||"").slice(0,80)}" required></label>
     <label>טלפון נייד<input type="tel" id="mPhone" maxlength="20" inputmode="tel" autocomplete="tel" placeholder="050-0000000" value="${esc(m?m.phone:"")}" required></label>
     <div class="why">למה צריך: כדי לזהות אתכם כשחקנים או כהורים במועדון וליצור קשר בענייני המועדון. רק מנהל המועדון רואה את הפרטים (מי שמזמין חברים עשוי להופיע ב"גביע החברים" בשם פרטי ואות). אין חובה חוקית למסור אותם, אבל בלעדיהם אי אפשר להיכנס לאפליקציה. לא נשלח פרסומות. <a href="privacy.html">מדיניות הפרטיות</a></div>
     <label class="chk"><input type="checkbox" id="mOk" ${m?"checked":""}><span>אני בן/בת 18 ומעלה (הורה או שחקן בוגר), קראתי את <a href="privacy.html">מדיניות הפרטיות</a> ואני מסכים/ה שהפרטים יישמרו לצורך זה</span></label>
@@ -401,7 +401,9 @@ function memberSheet(){
     if(!$("#mOk").checked)return $("#mErr").textContent="כדי לשמור צריך לאשר שאת/ה מעל גיל 18 ומסכים/ה לשמירת הפרטים.";
     $("#mSave").disabled=true;$("#mErr").textContent="";
     try{await TTCAuth.saveMember({name,phone,referrer:REF_LIVE&&isNew?store.get("ttc_ref"):null},isNew);ME.member={name,phone};rememberMe(ME.user,ME.member);renderMe();closeSheet();toast(isNew?"נרשמת. תודה!":"הפרטים עודכנו");if(isNew)setTimeout(maybePopup,900);track("click",isNew?"signup":"signup-edit")}
-    catch(err){$("#mSave").disabled=false;$("#mErr").textContent="לא הצלחנו לשמור. בדקו את החיבור ונסו שוב."}};
+    catch(err){let saved=null;try{saved=await TTCAuth.getMember()}catch(e){}
+      if(saved&&saved.phone===phone){ME.member={name:saved.name,phone};rememberMe(ME.user,ME.member);renderMe();closeSheet();toast(isNew?"נרשמת. תודה!":"הפרטים עודכנו");return}
+      $("#mSave").disabled=false;$("#mErr").textContent=err&&err.code==="permission-denied"?"לא הצלחנו לשמור: השם ארוך מדי או מתחיל בסימן. תקנו ונסו שוב.":"לא הצלחנו לשמור. בדקו את החיבור ונסו שוב."}};
   $("#mOut").onclick=async()=>{await TTCAuth.signOut();rememberMe(null);closeSheet();toast("התנתקת")};
   if(m)$("#mDel").onclick=async()=>{if(!confirm("למחוק את הפרטים שלך מהמועדון? אפשר להירשם שוב בכל זמן."))return;
     try{await TTCAuth.deleteMember();ME.member=null;rememberMe(null);closeSheet();renderMe();toast("הפרטים נמחקו")}catch(e){$("#mErr").textContent="המחיקה לא הצליחה. נסו שוב."}};
@@ -414,8 +416,12 @@ document.addEventListener("click",async e=>{
 1. לוחצים על שלוש הנקודות למעלה.
 2. בוחרים "פתיחה בדפדפן".
 3. שם לוחצים שוב על "כניסה".</div>`);
-    if(!window.TTCAuth)return toast("רגע, טוען…");
-    try{await TTCAuth.signIn()}catch(err){if(err&&err.code!=="auth/popup-closed-by-user"&&err.code!=="auth/cancelled-popup-request")toast("ההתחברות לא הצליחה. נסו שוב.")}
+    if(!window.TTCAuth||!ME.ready)return toast("רגע, טוען…");
+    SIGNING=true;const slow=setTimeout(()=>toast("אם חלון גוגל לא נפתח או נתקע, סגרו אותו ולחצו שוב על הכניסה"),45000);
+    try{await TTCAuth.signIn()}catch(err){const c=err&&err.code;
+      if(c==="auth/popup-blocked")toast("הדפדפן חסם את חלון הכניסה. לחצו שוב על הכניסה");
+      else if(c!=="auth/popup-closed-by-user"&&c!=="auth/cancelled-popup-request")toast("ההתחברות לא הצליחה. נסו שוב.")}
+    finally{clearTimeout(slow);SIGNING=false}
   }
   if(e.target.closest("#meEdit"))memberSheet();
 });
@@ -451,13 +457,13 @@ function activeEvent(){const today=new Date().toISOString().slice(0,10);
   return (POSTS||[]).find(p=>p&&!p.hidden&&p.popup&&/^[a-z0-9-]{3,40}$/.test(p.popup.event||"")&&(!p.popup.until||p.popup.until>=today))}
 function personRow(i,p,heats){const opt=(arr,v)=>arr.map(x=>`<option${x===v?" selected":""}>${esc(x)}</option>`).join("");
   return `<fieldset class="pp-row" data-i="${i}"><legend>${i===0?"אני":"משתתף/ת "+(i+1)}${i>0?' <button type="button" class="linkbtn pp-del" aria-label="הסרה">הסרה</button>':""}</legend>
-  <div class="two"><label>שם פרטי<input type="text" class="f-first" maxlength="40" value="${esc(p.firstName||"")}"></label><label>שם משפחה<input type="text" class="f-last" maxlength="40" value="${esc(p.lastName||"")}"></label></div>
+  <div class="two"><label>שם פרטי<input type="text" class="f-first" maxlength="40" value="${esc((p.firstName||"").slice(0,40))}"></label><label>שם משפחה<input type="text" class="f-last" maxlength="40" value="${esc((p.lastName||"").slice(0,40))}"></label></div>
   <div class="two"><label>מקצה<select class="f-heat">${opt(heats,p.heat||heats[0])}</select></label><label>מגדר<select class="f-gender"><option value="ז"${p.gender==="ז"?" selected":""}>זכר</option><option value="נ"${p.gender==="נ"?" selected":""}>נקבה</option></select></label></div>
   <label>תאריך לידה<div class="bd">${bdSel(p.birth)}</div></label>
   <label>מידת חולצה<select class="f-shirt">${opt(SHIRTS,p.shirt||"M")}</select></label></fieldset>`}
 async function eventSheet(post,force,fromPop){
   const ev=post.popup,hs=(Array.isArray(ev.heats)?ev.heats:[]).filter(x=>typeof x==="string"&&x&&x.length<=20).slice(0,6),heats=hs.length?hs:["4 ק״מ"];
-  let mine=[];try{mine=await TTCAuth.mySignups(ev.event)}catch(e){}
+  let mine=[];try{mine=await Promise.race([TTCAuth.mySignups(ev.event),new Promise((_,no)=>setTimeout(()=>no(0),5000))])}catch(e){}
   const img=/^img\/[\w.-]+$/.test(post.img||"")?post.img:"";
   // organiser's own sign-up file (same link as the poster's QR), offered next to the in-app form
   const ext=/^https:\/\/docs\.google\.com\//.test(post.link||"")?`<a class="btn ghost" style="margin-top:10px" href="${esc(post.link)}" target="_blank" rel="noopener">${esc(post.linkText||"לקובץ ההרשמה של המארגנים")}</a>`:"";
@@ -486,7 +492,9 @@ async function eventSheet(post,force,fromPop){
     if(!city)return err.textContent="חסרה עיר / יישוב.";
     $("#evSave").disabled=true;
     try{await TTCAuth.signUp(ev.event,people,ME.member.name);closeSheet();toast("נרשמתם! 🎉");track("click","event:"+ev.event)}
-    catch(x){$("#evSave").disabled=false;err.textContent=x&&x.code==="permission-denied"?"ההרשמה לא נשמרה: אחד הפרטים לא תקין (שם שמתחיל בסימן, טלפון או תאריך). בדקו ונסו שוב, או כתבו לנו בוואטסאפ 050-4999149.":"ההרשמה לא נשמרה. בדקו את החיבור לאינטרנט ונסו שוב."}};
+    catch(x){let done=[];try{done=await TTCAuth.mySignups(ev.event)}catch(e){}
+      if(done.length){closeSheet();toast("נרשמתם! 🎉");return}
+      $("#evSave").disabled=false;err.textContent=x&&x.code==="permission-denied"?"ההרשמה לא נשמרה: אחד הפרטים לא תקין (שם שמתחיל בסימן, טלפון או תאריך). בדקו ונסו שוב, או כתבו לנו בוואטסאפ 050-4999149.":"ההרשמה לא נשמרה. בדקו את החיבור לאינטרנט ונסו שוב."}};
 }
 let popReturn=null;
 let popAction=null,popLaterFn=null;
@@ -494,7 +502,7 @@ function showPop(post,opts={}){const img=opts.img||(/^img\/[\w.-]+$/.test(post.i
   $("#popImg").hidden=!img;if(img)$("#popImg").src=img;$("#popT").textContent=post.title||"";$("#popTx").textContent=post.text||"";
   popReturn=document.activeElement;const el=$("#pop");el.hidden=false;el.classList.add("on");requestAnimationFrame(()=>$("#popCard").focus({preventScroll:true}));track("post","popup:"+(post.popup?post.popup.event:"invite"))}
 function hidePop(){const el=$("#pop");el.hidden=true;el.classList.remove("on");popReturn&&popReturn.focus&&popReturn.focus({preventScroll:true})}
-async function maybePopup(){const p=activeEvent();if(!p||!ME.member||!window.TTCAuth||!$("#pop").hidden)return;
+async function maybePopup(){const p=activeEvent();if(!p||!ME.member||!ME.member.phone||!window.TTCAuth||!$("#pop").hidden)return;
   const later=+store.get("ttc_pop_"+p.popup.event)||0;if(Date.now()-later<2*86400e3)return; // "not now" waits two days
   try{if((await TTCAuth.mySignups(p.popup.event)).length)return}catch(e){}
   if(sheet.hidden)showPop(p)}
@@ -503,7 +511,7 @@ $("#popLater").onclick=$("#popX").onclick=()=>{if(popLaterFn){popLaterFn();retur
 $("#pop").addEventListener("click",e=>{if(e.target.id==="pop")$("#popLater").click()});
 addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#pop").hidden)$("#popLater").click()});
 function openEvent(){const p=activeEvent();if(!p)return;
-  if(!ME.user)return toast("כדי להירשם, נכנסים קודם עם Google באזור האישי");if(!ME.member)return memberSheet();eventSheet(p,true)}
+  if(!ME.user)return toast("כדי להירשם, נכנסים קודם עם Google באזור האישי");if(!ME.member||!ME.member.phone)return memberSheet();eventSheet(p,true)}
 
 /* ---------- push notifications: asked only on tap; on iPhone only inside the installed app (Apple's rule) ---------- */
 const VAPID="BGx07AqVN8ALvNMYIuAvwyvNE92-8eE8hhwU6KQ7jCqh8cAwPZk35SY3GhhFt1IQxFaOuEkQDYcTi_EcxTzlVNU"; // public Web Push key (Firebase Cloud Messaging)
@@ -552,7 +560,7 @@ document.addEventListener("click",async e=>{if(!e.target.closest("#invite"))retu
   home.addEventListener("touchend",async()=>{if(y0===null)return;y0=null;
     if(dy<90){ball.style.opacity=0;ball.style.transform="";return}
     busy=true;ball.style.transform="";ball.classList.add("spin");haptic();
-    try{const[d,p,sp]=await Promise.all([fetch("data.json",{cache:"no-store"}).then(r=>r.json()),fetch("posts.json",{cache:"no-store"}).then(r=>r.ok?r.json():{}).catch(()=>({})),staffPosts()]);
+    try{const[d,p,sp]=await Promise.all([tfetch("data.json",{cache:"no-store"},12000).then(r=>r.json()),tfetch("posts.json",{cache:"no-store"},5000).then(r=>r.ok?r.json():{}).catch(()=>({})),staffPosts()]);
       D=cleanData(d);POSTS=(Array.isArray(p.posts)?p.posts:[]).concat(sp);
       for(const f of [renderHome,renderPosts,()=>renderLeague(0),renderRank,renderClub])try{f()}catch(e){}
       toast("עודכן ✓")}catch(e){toast("אין חיבור כרגע")}
