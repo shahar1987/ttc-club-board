@@ -1,6 +1,6 @@
 // Network first so parents always see fresh results; the cache only answers when there is no signal.
-const CACHE = "ttc-v5";
-const SHELL = ["./", "index.html", "manifest.json", "icon-192.png", "icon-512.png", "data.json", "posts.json"];
+const CACHE = "ttc-v6";
+const SHELL = ["./", "index.html", "app.js", "manifest.json", "icon-192.png", "icon-512.png", "data.json", "posts.json"];
 
 self.addEventListener("install", e => {
   self.skipWaiting();
