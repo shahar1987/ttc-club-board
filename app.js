@@ -343,11 +343,15 @@ const GICON='<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
 let ME={user:null,member:null,ready:false};
 const PHONE_OK=v=>/^(\+?972|0)5\d{8}$/.test(v.replace(/[\s-]/g,""));
 function renderMe(){
-  const el=$("#me");$("#meSec").hidden=false;
+  const el=$("#me");$("#meSec").hidden=false;const al=$("#adminLink");al&&al.remove();
   if(!ME.user){el.innerHTML=`<div class="tx"><b>האזור האישי</b>התחברו כדי שנזהה אתכם במועדון ונעדכן אתכם. הצפייה באפליקציה פתוחה גם בלי.</div><button class="gbtn" id="gIn" type="button">${GICON}כניסה</button>`;return}
   if(!ME.member){el.innerHTML=`<div class="tx"><b>עוד צעד קטן</b>נשאר רק להוסיף טלפון.</div><button class="btn" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">השלמה</button>`;return}
   el.innerHTML=`<div class="tx"><b>${esc(ME.member.name)}</b>מחובר/ת · ${esc(ME.user.email)}</div><button class="btn ghost" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">הפרטים שלי</button>`;
+  isOwner(ME.user.email).then(o=>{if(o&&!$("#adminLink"))el.insertAdjacentHTML("afterend",'<a class="btn" id="adminLink" href="https://claude.ai/artifact/3SXiwqugcLXd7LS3ZZ82CY" target="_blank" rel="noopener" style="margin-top:8px;width:100%">דשבורד ניהול</a>')});
 }
+// the owner's address is kept only as a hash in this public code; the dashboard itself checks the Claude account
+const OWNER_HASH="01729b4d5d3e455f8bacc0637897aa134b9fb122fc148113f0d0180dfab464f4";
+async function isOwner(email){try{const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode((email||"").trim().toLowerCase()));return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("")===OWNER_HASH}catch(e){return false}}
 function memberSheet(){
   const m=ME.member,isNew=!m;
   openSheet(`<h2 class="post-h">${isNew?"הצטרפות לאזור האישי":"הפרטים שלי"}</h2>
