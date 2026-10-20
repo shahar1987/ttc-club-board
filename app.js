@@ -373,7 +373,7 @@ function memberSheet(){
     if(!PHONE_OK(phone))return $("#mErr").textContent="מספר הנייד לא נראה תקין. לדוגמה 050-1234567.";
     if(!$("#mOk").checked)return $("#mErr").textContent="כדי לשמור צריך לאשר שאת/ה מעל גיל 18 ומסכים/ה לשמירת הפרטים.";
     $("#mSave").disabled=true;$("#mErr").textContent="";
-    try{await TTCAuth.saveMember({name,phone},isNew);ME.member={name,phone};renderMe();closeSheet();toast(isNew?"נרשמת. תודה!":"הפרטים עודכנו");if(isNew)setTimeout(maybePopup,900);track("click",isNew?"signup":"signup-edit")}
+    try{await TTCAuth.saveMember({name,phone,referrer:REF_LIVE&&isNew?store.get("ttc_ref"):null},isNew);ME.member={name,phone};renderMe();closeSheet();toast(isNew?"נרשמת. תודה!":"הפרטים עודכנו");if(isNew)setTimeout(maybePopup,900);track("click",isNew?"signup":"signup-edit")}
     catch(err){$("#mSave").disabled=false;$("#mErr").textContent="לא הצלחנו לשמור. בדקו את החיבור ונסו שוב."}};
   $("#mOut").onclick=async()=>{await TTCAuth.signOut();closeSheet();toast("התנתקת")};
   if(m)$("#mDel").onclick=async()=>{if(!confirm("למחוק את הפרטים שלך מהמועדון? אפשר להירשם שוב בכל זמן."))return;
@@ -472,15 +472,22 @@ $("#pushOn").onclick=async()=>{
 
 /* ---------- bring a friend: members share a personal link; the friend lands on a welcome popup with one tap to book a free trial ---------- */
 const BOARD_URL="https://shahar1987.github.io/ttc-club-board/";
+const REF_LIVE=false; // on once boardMembers.ref + boardPublic/referrals rules are live (attendance-app PR)
+async function loadTrophy(){if(!REF_LIVE||!window.TTCAuth)return;let r=null;try{r=await TTCAuth.referrals()}catch(e){}
+  const top=r&&Array.isArray(r.top)?r.top.filter(x=>x&&typeof x.name==="string"&&Number.isFinite(+x.count)).slice(0,10):[];
+  if(!top.length)return;const medal=["🥇","🥈","🥉"];
+  $("#trophy").innerHTML=top.map((x,i)=>`<div class="lrow" style="cursor:default"><span class="rk">${medal[i]||i+1}</span><span class="nm"><b>${esc(x.name)}</b><span>${+x.count===1?"הביא/ה חבר אחד":"הביא/ה "+(+x.count)+" חברים"}</span></span><span></span></div>`).join("");
+  $("#trophySec").hidden=false}
+addEventListener("ttc-auth-ready",loadTrophy,{once:true});
 const cleanName=v=>String(v||"").replace(/[^\p{L}\s'׳"-]/gu,"").replace(/\s+/g," ").trim().slice(0,20);
 document.addEventListener("click",async e=>{if(!e.target.closest("#invite"))return;
   const first=cleanName((ME.member&&ME.member.name||"").split(" ")[0]);
-  const url=BOARD_URL+"?from="+encodeURIComponent(first);
+  const url=BOARD_URL+"?from="+encodeURIComponent(first)+(REF_LIVE&&ME.user?"&ref="+encodeURIComponent(ME.user.uid):"");
   const text=`היי! אני מתאמן/ת במועדון טניס השולחן מבואות החרמון ובא לי שתבוא/י לנסות 🏓 אימון ניסיון ראשון בחינם, לכל הגילים. כל הפרטים כאן:`;
   track("click","invite-share");
   if(navigator.share){try{await navigator.share({title:"מועדון טניס שולחן מבואות החרמון",text,url});return}catch(err){if(err&&err.name==="AbortError")return}}
   open("https://wa.me/?text="+encodeURIComponent(text+"\n"+url),"_blank","noopener")});
-(()=>{const from=cleanName(new URLSearchParams(location.search).get("from"));if(!from)return;
+(()=>{const q=new URLSearchParams(location.search),from=cleanName(q.get("from")),rf=q.get("ref")||"";if(/^[A-Za-z0-9]{10,128}$/.test(rf)&&!store.get("ttc_ref"))store.set("ttc_ref",rf);if(!from)return;
   try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}
   if(store.get("ttc_invited"))return;track("view","invite");
   introDone.then(()=>setTimeout(()=>{if(!$("#pop").hidden||ME.member)return;
