@@ -347,6 +347,7 @@ function renderMe(){
   if(!ME.user){el.innerHTML=`<div class="tx"><b>האזור האישי</b>התחברו כדי שנזהה אתכם במועדון ונעדכן אתכם. הצפייה באפליקציה פתוחה גם בלי.</div><button class="gbtn" id="gIn" type="button">${GICON}כניסה</button>`;return}
   if(!ME.member){el.innerHTML=`<div class="tx"><b>עוד צעד קטן</b>נשאר רק להוסיף טלפון.</div><button class="btn" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">השלמה</button>`;return}
   el.innerHTML=`<div class="tx"><b>${esc(ME.member.name)}</b>מחובר/ת · ${esc(ME.user.email)}</div><button class="btn ghost" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">הפרטים שלי</button>`;
+  el.insertAdjacentHTML("beforeend",'<button class="btn invite" id="invite" type="button">🎁 להזמין חבר/ה לאימון ניסיון</button>');
   isOwner(ME.user.email).then(o=>{if(o&&!$("#adminLink"))$("#tabbar").insertAdjacentHTML("beforeend",'<a class="tab" id="adminLink" href="https://claude.ai/artifact/3SXiwqugcLXd7LS3ZZ82CY" target="_blank" rel="noopener"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>ניהול</a>');moveBall(current,true)});
 }
 // the owner's address is kept only as a hash in this public code; the dashboard itself checks the Claude account
@@ -440,16 +441,17 @@ async function eventSheet(post,force,fromPop){
     catch(x){$("#evSave").disabled=false;err.textContent="ההרשמה לא נשמרה. בדקו את החיבור ונסו שוב."}};
 }
 let popReturn=null;
-function showPop(post){const img=/^img\/[\w.-]+$/.test(post.img||"")?post.img:"";
+let popAction=null,popLaterFn=null;
+function showPop(post,opts={}){const img=opts.img||(/^img\/[\w.-]+$/.test(post.img||"")?post.img:"");$("#popGo").textContent=opts.go||"להרשמה";popAction=opts.action||null;popLaterFn=opts.later||null;
   $("#popImg").hidden=!img;if(img)$("#popImg").src=img;$("#popT").textContent=post.title||"";$("#popTx").textContent=post.text||"";
-  popReturn=document.activeElement;const el=$("#pop");el.hidden=false;el.classList.add("on");requestAnimationFrame(()=>$("#popCard").focus({preventScroll:true}));track("post","popup:"+post.popup.event)}
+  popReturn=document.activeElement;const el=$("#pop");el.hidden=false;el.classList.add("on");requestAnimationFrame(()=>$("#popCard").focus({preventScroll:true}));track("post","popup:"+(post.popup?post.popup.event:"invite"))}
 function hidePop(){const el=$("#pop");el.hidden=true;el.classList.remove("on");popReturn&&popReturn.focus&&popReturn.focus({preventScroll:true})}
 async function maybePopup(){const p=activeEvent();if(!p||!ME.member||!window.TTCAuth||!$("#pop").hidden)return;
   const later=+store.get("ttc_pop_"+p.popup.event)||0;if(Date.now()-later<2*86400e3)return; // "not now" waits two days
   try{if((await TTCAuth.mySignups(p.popup.event)).length)return}catch(e){}
   if(sheet.hidden)showPop(p)}
-$("#popGo").onclick=()=>{const p=activeEvent();hidePop();if(p)eventSheet(p,true,true)};
-$("#popLater").onclick=$("#popX").onclick=()=>{const p=activeEvent();if(p)store.set("ttc_pop_"+p.popup.event,String(Date.now()));hidePop()};
+$("#popGo").onclick=()=>{hidePop();if(popAction)return popAction();const p=activeEvent();if(p)eventSheet(p,true,true)};
+$("#popLater").onclick=$("#popX").onclick=()=>{if(popLaterFn){popLaterFn();return hidePop()}const p=activeEvent();if(p)store.set("ttc_pop_"+p.popup.event,String(Date.now()));hidePop()};
 $("#pop").addEventListener("click",e=>{if(e.target.id==="pop")$("#popLater").click()});
 addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#pop").hidden)$("#popLater").click()});
 function openEvent(){const p=activeEvent();if(!p)return;
@@ -467,3 +469,21 @@ $("#pushOn").onclick=async()=>{
   const wait=()=>window.TTCAuth?Promise.resolve():new Promise(r=>addEventListener("ttc-auth-ready",r,{once:true}));
   try{await wait();await TTCAuth.enablePush(VAPID,isIOS?"ios":DEV==="mobile"?"android":"desktop");$("#pushSec").hidden=true;toast("ההתראות הופעלו 🔔");track("click","push-on")}
   catch(e){$("#pushOn").disabled=false;toast("לא הצלחנו להפעיל התראות במכשיר הזה")}};
+
+/* ---------- bring a friend: members share a personal link; the friend lands on a welcome popup with one tap to book a free trial ---------- */
+const BOARD_URL="https://shahar1987.github.io/ttc-club-board/";
+const cleanName=v=>String(v||"").replace(/[^\p{L}\s'׳"-]/gu,"").replace(/\s+/g," ").trim().slice(0,20);
+document.addEventListener("click",async e=>{if(!e.target.closest("#invite"))return;
+  const first=cleanName((ME.member&&ME.member.name||"").split(" ")[0]);
+  const url=BOARD_URL+"?from="+encodeURIComponent(first);
+  const text=`היי! אני מתאמן/ת במועדון טניס השולחן מבואות החרמון ובא לי שתבוא/י לנסות 🏓 אימון ניסיון ראשון בחינם, לכל הגילים. כל הפרטים כאן:`;
+  track("click","invite-share");
+  if(navigator.share){try{await navigator.share({title:"מועדון טניס שולחן מבואות החרמון",text,url});return}catch(err){if(err&&err.name==="AbortError")return}}
+  open("https://wa.me/?text="+encodeURIComponent(text+"\n"+url),"_blank","noopener")});
+(()=>{const from=cleanName(new URLSearchParams(location.search).get("from"));if(!from)return;
+  try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}
+  if(store.get("ttc_invited"))return;track("view","invite");
+  introDone.then(()=>setTimeout(()=>{if(!$("#pop").hidden||ME.member)return;
+    showPop({title:`${from} מזמין/ה אותך למועדון 🏓`,text:"אימון ניסיון ראשון בחינם, לכל הגילים ובכל מועד.\nכותבים לנו ונתאם יחד מתי מתאים לך."},{img:"logo.png",go:"לתיאום אימון ניסיון",
+      action:()=>{store.set("ttc_invited","1");track("click","invite-book");open("https://wa.me/972504999149?text="+encodeURIComponent(`היי, הגעתי דרך ${from} ואשמח לתאם אימון ניסיון 🏓`),"_blank","noopener")},
+      later:()=>store.set("ttc_invited","1")})},900))})();
