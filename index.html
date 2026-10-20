@@ -66,6 +66,7 @@ nav a.on{background:var(--green);color:#fff;border-color:var(--green)}
 .after{margin-top:18px;display:grid;gap:8px}
 .after a{display:flex;justify-content:space-between;gap:12px;text-decoration:none;background:rgba(255,255,255,.08);border-radius:12px;padding:10px 14px;font-size:14px}
 .after a:hover{background:rgba(255,255,255,.14)}
+.after a span:last-child{white-space:nowrap}
 
 /* sections */
 main section{padding-block:34px 6px}
@@ -78,7 +79,8 @@ main section{padding-block:34px 6px}
 .seg button[aria-pressed="true"]{background:var(--green);color:#fff}
 .box{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
 .scroll{overflow-x:auto}
-table.st{width:100%;border-collapse:collapse;font-size:14px;min-width:420px}
+table.st{width:100%;border-collapse:collapse;font-size:14px}
+@media (max-width:520px){.st th:nth-child(5),.st td:nth-child(5){display:none}.st th,.st td{padding-inline:4px}}
 .st th{font-weight:500;color:var(--muted);text-align:center;padding:10px 6px;border-bottom:1px solid var(--line);font-size:12.5px}
 .st th:nth-child(2),.st td:nth-child(2){text-align:right}
 .st td{padding:10px 6px;text-align:center;border-bottom:1px solid var(--line)}
@@ -181,6 +183,23 @@ footer b{color:var(--ink)}
   .m{grid-template-columns:52px 1fr auto 1fr;font-size:13px}
   .table{min-height:150px}.vs{width:42px;height:42px;font-size:16px}
 }
+/* motion: one orchestrated hero entrance + a live rally on the table; everything else answers a tap */
+.table .pp{position:absolute;z-index:2;top:50%;left:8%;width:14px;height:14px;margin-top:-7px;animation:rallyX 2.6s cubic-bezier(.45,.05,.55,.95) infinite alternate}
+.table .pp i{display:block;width:14px;height:14px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(183,226,74,.35),0 6px 10px rgba(0,0,0,.35);animation:rallyY .65s cubic-bezier(.3,0,.7,1) infinite alternate}
+@keyframes rallyX{to{left:calc(92% - 14px)}}
+@keyframes rallyY{from{transform:translateY(-34px)}to{transform:translateY(18px)}}
+.hero-in>*{animation:rise .6s cubic-bezier(.2,.8,.2,1) both}
+.hero-in>*:nth-child(2){animation-delay:.08s}.hero-in>*:nth-child(3){animation-delay:.16s}.hero-in>*:nth-child(4){animation-delay:.24s}.hero-in>*:nth-child(5){animation-delay:.32s}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}}
+nav a,.chip,.seg button,.s-btn,.events a,.after a,.row,.go,.soc a{transition:background-color .2s,color .2s,border-color .2s,transform .15s,box-shadow .2s}
+nav a:active,.chip:active,.seg button:active,.s-btn:active,.events a:active,.after a:active,.go:active,.soc a:active{transform:scale(.96)}
+.s-btn:hover{transform:translateY(-2px);box-shadow:0 10px 24px rgba(15,74,51,.18)}
+.post{transition:transform .2s,box-shadow .2s}.post:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(15,74,51,.14)}
+.bar span{transform-origin:right;transition:transform 1s cubic-bezier(.2,.8,.2,1)}
+.lb:not(.grown) .bar span{transform:scaleX(0)}
+.card.show{animation:pop .35s cubic-bezier(.2,.8,.2,1)}
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}}
+.rounds{transition:opacity .2s}.rounds.swap{opacity:0}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
 </style>
 
@@ -255,6 +274,16 @@ footer b{color:var(--ink)}
 </div>
 
 <script>
+// anonymous visit stats -> Google Sheet in the club's Drive (append-only Apps Script); no names, no IP stored
+const STATS_URL="";
+const VID=(()=>{try{let v=localStorage.getItem("ttc_v");if(!v){v=Math.random().toString(36).slice(2,12);localStorage.setItem("ttc_v",v)}return v}catch(e){return "anon"}})();
+const SRC=(()=>{const x=location.search+" "+document.referrer;return /fbclid|facebook|fb\.com/i.test(x)?"facebook":/instagram|igsh/i.test(x)?"instagram":/whatsapp|wa\.me/i.test(x)?"whatsapp":document.referrer?"other":"direct"})();
+const DEV=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)?"mobile":"desktop";
+const QUEUE=[];let qTimer=0;
+function track(t,n){if(!STATS_URL)return;QUEUE.push({t,n:String(n||"").slice(0,80),v:VID,s:SRC,d:DEV});clearTimeout(qTimer);qTimer=setTimeout(flush,1500)}
+function flush(){if(!STATS_URL||!QUEUE.length)return;try{fetch(STATS_URL,{method:"POST",mode:"no-cors",keepalive:true,body:JSON.stringify(QUEUE.splice(0,20))})}catch(e){}}
+addEventListener("pagehide",flush);
+track("view","home");
 const CAT={S:"בוגרים",S40:"ותיקים +40",S50:"ותיקים +50",S60:"ותיקים +60",S70:"ותיקים +70",J19:"נוער עד 19",Y17:"נוער עד 17",C14:"עד 15",C15:"עד 15",M13:"עד 13",M12:"עד 13",B11:"ילדים עד 11",B10:"ילדים עד 11",B9:"ילדים עד 11"};
 const GROUPS=[["ילדים","עד גיל 11",c=>/^B/.test(c)],["צעירים","עד גיל 15",c=>/^[MC]/.test(c)],["נוער","עד גיל 19",c=>/^[JY]/.test(c)],["בוגרים","",c=>c==="S"],["ותיקים","40 ומעלה",c=>/^S\d/.test(c)]];
 const $=s=>document.querySelector(s);
@@ -275,9 +304,10 @@ function hero(){
   if(!n){$("#hero").innerHTML=`<span class="kicker"><span class="dot"></span>אין משחקים קרובים בלוח</span>`;return}
   const T=when(n.d,n.t), today=T.toDateString()===now.toDateString(), home=ours(n.h);
   const side=c=>`<div class="side${ours(c)?" us":""}"><b>${esc(short(c))}</b><small>${c===n.h?"בית":"חוץ"}</small></div>`;
+  $("#hero").classList.add("hero-in");
   $("#hero").innerHTML=`
    <span class="kicker${today?" live":""}"><span class="dot"></span>${today?"היום משחקים!":"המשחק הבא שלנו"} · ${esc(n.lg.name)}, ${esc(n.lg.group)}</span>
-   <div class="table" role="img" aria-label="${esc(D.teams[n.h])} נגד ${esc(D.teams[n.a])}"><span class="net"></span>${side(n.h)}<div class="vs">VS</div>${side(n.a)}</div>
+   <div class="table" role="img" aria-label="${esc(D.teams[n.h])} נגד ${esc(D.teams[n.a])}"><span class="net"></span><span class="pp" aria-hidden="true"><i></i></span>${side(n.h)}<div class="vs">VS</div>${side(n.a)}</div>
    <div class="meta"><div>📅 ${nice(n.d)}</div><div>🕖 <span class="num">${n.t}</span></div><div>📍 ${home?"משחק בית · בית ספר רמת כורזים":"משחק חוץ"}</div><div>מחזור ${n.r}</div></div>
    <div class="count num" id="cd" aria-label="ספירה לאחור"></div>
    <div class="after">${soon.slice(1,4).map(m=>`<a href="#${m.lg.id}"><span>${esc(short(m.h))} – ${esc(short(m.a))}</span><span class="num">${nice(m.d)} · ${m.t}</span></a>`).join("")}</div>`;
@@ -302,7 +332,7 @@ function league(l){
       let tag="";if(mine&&played(m)){const us=ours(m.h)?m.h:m.a;tag=m.w===us?'<span class="tag w">ניצחון</span>':m.w?'<span class="tag l">הפסד</span>':""}
       return `<div class="m${mine?" mine":""}"><div class="when num">${nice(m.d)}<br>${m.t}</div><div class="h">${nm(m.h)}</div><div class="sc num">${played(m)?esc(m.res):"–"}</div><div class="a">${nm(m.a)}${tag}</div></div>`}).join("")}</div>`).join("")||`<div class="empty">אין משחקים להצגה</div>`;
   };
-  sec.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{sec.querySelectorAll(".seg button").forEach(x=>x.setAttribute("aria-pressed",x===b));draw(b.dataset.f)});
+  sec.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{sec.querySelectorAll(".seg button").forEach(x=>x.setAttribute("aria-pressed",x===b));const r=sec.querySelector(".rounds");r.classList.add("swap");setTimeout(()=>{draw(b.dataset.f);r.classList.remove("swap")},180);track("league",l.id+":"+b.dataset.f)});
   draw("ours");
 }
 
@@ -317,7 +347,9 @@ function showPlayer(id){
    <div class="big num">${p.rank?"#"+p.rank:"טרם דורג"}</div><div style="font-size:13px;opacity:.85">${p.rank?"מקום בדירוג הארצי לגברים":"הדירוג נקבע אחרי המשחקים הרשמיים הראשונים"}</div>
    <div class="cols"><div><small>נקודות דירוג</small><b class="num">${p.pts?p.pts.toFixed(1):"0"}</b></div>${club?`<div><small>מקום במועדון</small><b class="num">${club}</b></div>`:""}${ch?`<div><small>מגמה</small><b>${ch}</b></div>`:""}</div>
    <div style="margin-top:12px;font-size:13px"><a href="https://www.tttm.co.il/p/${p.id}/" target="_blank" rel="noopener">כרטיס השחקן המלא באתר האיגוד</a></div>`;
-  c.classList.add("show");c.scrollIntoView({behavior:"smooth",block:"center"});
+  c.classList.remove("show");void c.offsetWidth;c.classList.add("show");c.scrollIntoView({behavior:"smooth",block:"center"});
+  const big=c.querySelector(".big");if(p.rank&&!matchMedia("(prefers-reduced-motion:reduce)").matches){const end=p.rank,t0=performance.now();const step=t=>{const k=Math.min(1,(t-t0)/700);big.textContent="#"+Math.round(end+(1-k)*(1-k)*600);if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step)}
+  track("player",p.n);
 }
 function ranks(){
   $("#rankSub").textContent=`הדירוג הארצי מתעדכן בסוף כל חודש. העדכון הבא צפוי ב-${D.nextRanking}`;
@@ -337,7 +369,14 @@ function train(){
 }
 function wireNav(){
   const links=[...document.querySelectorAll("nav a")];
-  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)links.forEach(a=>a.classList.toggle("on",a.getAttribute("href")==="#"+e.target.id))}),{rootMargin:"-40% 0px -55% 0px"});
+  const seen=new Set();
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(!e.isIntersecting)return;const id=e.target.id;
+    links.forEach(a=>{const on=a.getAttribute("href")==="#"+id;a.classList.toggle("on",on);if(on)a.scrollIntoView({block:"nearest",inline:"center",behavior:"smooth"})});
+    if(!seen.has(id)){seen.add(id);track("section",id)}
+    if(id==="rank")$("#lb").classList.add("grown")}),{rootMargin:"-40% 0px -55% 0px"});
+  links.forEach(a=>a.addEventListener("click",()=>track("click","nav:"+a.getAttribute("href").slice(1))));
+  document.querySelectorAll(".soc a,.s-btn").forEach(a=>a.addEventListener("click",()=>track("social",/facebook/.test(a.href)?"facebook":/instagram/.test(a.href)?"instagram":"whatsapp")));
+  document.addEventListener("click",e=>{const g=e.target.closest(".post .go");if(g)track("post",g.closest(".post").querySelector("h3").textContent)});
   links.forEach(a=>{const s=document.querySelector(a.getAttribute("href"));if(s)io.observe(s)});
   document.addEventListener("click",e=>{const b=e.target.closest("[data-pid]");if(b)showPlayer(+b.dataset.pid)});
 }
