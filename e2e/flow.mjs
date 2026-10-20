@@ -174,7 +174,8 @@ async function adminFlow() {
   await page.click("#new"); await page.fill("#fT", "עדכון ממנהל"); await page.click("#fS"); await page.waitForSelector("#new", { timeout: 15000 });
   assert.ok((await docs("boardPosts")).some((d) => field(d, "title") === "עדכון ממנהל"), "manager post saved");
   assert.equal(await page.evaluate(() => TTCAuth.admin.members().then(() => "read!").catch((e) => e.code)), "permission-denied", "manager cannot read members");
-  ok("מנהל: מפרסם עדכון, ולא רואה נרשמים"); await ctx.close();
+  ok("מנהל: מפרסם עדכון, ולא רואה נרשמים");
+  step = "admin-tab-on-own-device"; await page.goto(APP); await page.waitForSelector("#adminLink", { timeout: 10000 }); ok("כפתור הניהול מופיע בפורטל רק במכשיר שנכנס לדשבורד"); await ctx.close();
 
 
   step = "portal-shows-post"; ctx = await browser.newContext({ viewport: { width: 390, height: 844 } }); page = await ctx.newPage();

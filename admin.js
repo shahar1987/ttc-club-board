@@ -30,6 +30,7 @@ function signedOut() {
   $("#in").onclick = async () => { ASKED = true; try { await TTCAuth.signIn(); } catch (e) { if (e && e.code === "auth/popup-blocked") toast("הדפדפן חסם את חלון הכניסה. לחצו שוב"); } };
 }
 function notOwner() {
+  try { localStorage.removeItem("ttc_admin"); } catch (e) {}
   $("#tabbar").hidden = true;
   main.innerHTML = `<div class="center screen"><img src="logo.png" alt=""><h2>הדף הזה פרטי</h2><div class="muted">אין לחשבון הזה גישה לניהול.</div><div class="row" style="justify-content:center"><a class="btn ghost" href="./" style="display:inline-flex;align-items:center;text-decoration:none">לפורטל</a><button class="btn ghost" id="out" type="button">התנתקות</button></div></div>`;
   $("#out").onclick = () => TTCAuth.signOut();
@@ -54,6 +55,7 @@ addEventListener("ttc-auth-ready", () => {
     if (await isOwner(u.email)) { ROLE = "owner"; TABS = ALL_TABS; }
     else if (await TTCAuth.isManager()) { ROLE = "manager"; TABS = ALL_TABS.filter((x) => x[0] === "posts" || x[0] === "more"); }
     else return notOwner();
+    try { localStorage.setItem("ttc_admin", "1"); } catch (e) {} // the portal shows the ניהול tab on this device only
     const h = (location.hash || "").slice(1);
     go(TABS.some((t) => t[0] === h) ? h : "posts");
   });
