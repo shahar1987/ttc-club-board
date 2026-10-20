@@ -484,7 +484,7 @@ async function pushOnClick(){
 
 /* ---------- bring a friend: members share a personal link; the friend lands on a welcome popup with one tap to book a free trial ---------- */
 const BOARD_URL="https://shahar1987.github.io/ttc-club-board/";
-const REF_LIVE=false; // on once boardMembers.ref + boardPublic/referrals rules are live (attendance-app PR)
+const REF_LIVE=true;
 async function loadTrophy(){if(!REF_LIVE||!window.TTCAuth)return;let r=null;try{r=await TTCAuth.referrals()}catch(e){}
   const top=r&&Array.isArray(r.top)?r.top.filter(x=>x&&typeof x.name==="string"&&Number.isFinite(+x.count)).slice(0,10):[];
   if(!top.length)return;const medal=["🥇","🥈","🥉"];
