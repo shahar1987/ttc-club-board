@@ -64,14 +64,14 @@ function spring({from,to,velocity=0,response=.4,damping=1,onUpdate,onDone}){
 }
 
 /* ---------- tab bar ball: arcs from wherever it is now to the tapped tab ---------- */
-const ball=$("#tball");let ballX=0,ballStop=null;
+const ball=$("#tball");let ballX=0,ballY=0,ballStop=null,squash=null;
 function tabCenter(name){const b=$(`.tab[data-go="${name}"]`),bar=$("#tabbar").getBoundingClientRect(),r=b.getBoundingClientRect();return r.left-bar.left+r.width/2}
 function moveBall(name,instant){
-  const to=tabCenter(name),from=ballX;ballStop&&ballStop();
-  if(instant||RM.matches){ballX=to;ball.style.transform=`translate(${to}px,0)`;return}
+  const to=tabCenter(name),from=ballX,y0=ballY;ballStop&&ballStop();squash&&squash.cancel();squash=null;
+  if(instant||RM.matches){ballX=to;ballY=0;ball.style.transform=`translate(${to}px,0)`;return}
   const dist=Math.abs(to-from)||1,arc=Math.min(26,10+dist*.12);
-  ballStop=spring({from,to,response:.5,damping:.82,onUpdate:x=>{ballX=x;const p=Math.min(1,Math.max(0,Math.abs(x-from)/dist));const y=-arc*Math.sin(Math.PI*Math.min(1,p));ball.style.transform=`translate(${x}px,${y}px)`},
-    onDone:()=>ball.animate([{transform:`translate(${to}px,0) scale(1.35,.7)`},{transform:`translate(${to}px,0) scale(1)`}],{duration:260,easing:"cubic-bezier(.2,.8,.2,1)"})});
+  ballStop=spring({from,to,response:.5,damping:.82,onUpdate:x=>{ballX=x;const p=Math.min(1,Math.max(0,Math.abs(x-from)/dist));const y=-arc*Math.sin(Math.PI*p)+y0*(1-p);ballY=y;ball.style.transform=`translate(${x}px,${y}px)`},
+    onDone:()=>{ballY=0;squash=ball.animate([{transform:`translate(${to}px,0) scale(1.35,.7)`},{transform:`translate(${to}px,0) scale(1)`}],{duration:260,easing:"cubic-bezier(.2,.8,.2,1)"})}});
 }
 addEventListener("resize",()=>moveBall(current,true));
 
@@ -81,24 +81,25 @@ function go(name,opts={}){
   if(!ORDER.includes(name))return;
   if(name===current){const s=$("#s-"+name);s.scrollTo({top:0,behavior:RM.matches?"auto":"smooth"});return}
   const from=$("#s-"+current),to=$("#s-"+name),dir=ORDER.indexOf(name)>ORDER.indexOf(current)?1:-1; // RTL: forward = slides in from the left
-  swapAnims.forEach(a=>a.cancel());swapAnims=[];
-  $$(".screen").forEach(s=>{if(s!==from)s.hidden=true;s.style.opacity="";s.style.transform=""});
+  swapAnims=[];
+  $$(".screen").forEach(s=>{s.getAnimations().forEach(x=>x.cancel());if(s!==from)s.hidden=true;s.style.cssText=""});
   $$(".tab").forEach(t=>t.setAttribute("aria-selected",t.dataset.go===name));
-  moveBall(name);haptic();
-  to.hidden=false;
+  moveBall(name);if(!opts.quiet)haptic();
+  to.hidden=false;to.style.zIndex=1;from.style.pointerEvents="none";
   if(!RM.matches){
     const dx=28*dir;
     const a=from.animate([{transform:"translateX(0)",opacity:1},{transform:`translateX(${dx}%)`,opacity:0}],{duration:300,easing:"cubic-bezier(.4,0,.2,1)",fill:"forwards"});
     const b=to.animate([{transform:`translateX(${-dx}%)`,opacity:0},{transform:"translateX(0)",opacity:1}],{duration:360,easing:"cubic-bezier(.2,.8,.2,1)"});
-    a.onfinish=()=>{if(from!==$("#s-"+current))from.hidden=true;a.cancel()};swapAnims=[a,b];
-  }else from.hidden=true;
+    a.onfinish=()=>{a.onfinish=null;a.cancel();if(from!==$("#s-"+current))from.hidden=true;from.style.cssText=""};swapAnims=[a,b];
+  }else{from.hidden=true;from.style.cssText=""}
   current=name;
   if(!opts.silent){try{history.replaceState(null,"","#"+name)}catch(e){}}
   track("section",name);
-  if(name==="rank")growPodium();
+  if(name==="rank")introDone.then(growPodium);
   if(name==="leagues")requestAnimationFrame(()=>{placePill($("#lgSeg"));placePill($("#viewSeg"))});
   if(name==="club")requestAnimationFrame(()=>placePill($("#venueSeg")));
 }
+addEventListener("hashchange",()=>go(location.hash.slice(1),{silent:true,quiet:true}));
 document.addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(g){e.preventDefault();go(g.dataset.go)}});
 $$(".screen").forEach(s=>s.addEventListener("scroll",()=>{const t=s.querySelector(".top");t&&t.classList.toggle("scrolled",s.scrollTop>4)},{passive:true}));
 
@@ -113,11 +114,11 @@ addEventListener("resize",()=>$$(".seg").forEach(placePill));
 const sheet=$("#sheet"),scrim=$("#scrim");let sheetY=0,sheetH=0,sheetStop=null;
 const setY=y=>{sheetY=y;sheet.style.transform=`translateY(${y}px)`;scrim.style.opacity=String(Math.max(0,1-y/Math.max(1,sheetH)))};
 function openSheet(html){
-  $("#sheetBody").innerHTML=html;$("#sheetBody").scrollTop=0;sheet.hidden=false;scrim.hidden=false;
+  const wasHidden=sheet.hidden;$("#sheetBody").innerHTML=html;$("#sheetBody").scrollTop=0;sheet.hidden=false;scrim.hidden=false;scrim.style.pointerEvents="";
   sheetH=sheet.getBoundingClientRect().height;sheetStop&&sheetStop();
-  sheetStop=spring({from:sheetY>0&&sheetY<sheetH?sheetY:sheetH,to:0,response:.38,damping:.86,onUpdate:setY});
+  sheetStop=spring({from:wasHidden?sheetH:Math.min(sheetY,sheetH),to:0,response:.38,damping:.86,onUpdate:setY});
 }
-function closeSheet(v=0){sheetStop&&sheetStop();sheetStop=spring({from:sheetY,to:sheetH+40,velocity:v,response:.32,damping:1,onUpdate:setY,onDone:()=>{sheet.hidden=true;scrim.hidden=true}})}
+function closeSheet(v=0){scrim.style.pointerEvents="none";sheetStop&&sheetStop();sheetStop=spring({from:sheetY,to:sheetH+40,velocity:v,response:.32,damping:1,onUpdate:setY,onDone:()=>{sheet.hidden=true;scrim.hidden=true}})}
 scrim.addEventListener("click",()=>closeSheet());
 addEventListener("keydown",e=>{if(e.key==="Escape"&&!sheet.hidden)closeSheet()});
 (()=>{let start=null,hist=[];
@@ -131,7 +132,7 @@ addEventListener("keydown",e=>{if(e.key==="Escape"&&!sheet.hidden)closeSheet()})
     const a=hist[0],b=hist[hist.length-1],v=b.t>a.t?(b.y-a.y)/(b.t-a.t)*1000:0;
     const projected=sheetY+(v/1000)*.998/(1-.998);
     if(projected>sheetH*.45)closeSheet(v);else{sheetStop=spring({from:sheetY,to:0,velocity:v,response:.35,damping:.85,onUpdate:setY})}};
-  sheet.addEventListener("pointerup",end);sheet.addEventListener("pointercancel",end);
+  sheet.addEventListener("pointerup",end);sheet.addEventListener("pointercancel",()=>{if(start&&start.drag)sheetStop=spring({from:sheetY,to:0,response:.35,damping:.85,onUpdate:setY});start=null});
 })();
 
 /* ---------- home ---------- */
@@ -305,10 +306,10 @@ function boot(){
   const start=(location.hash||"").slice(1);
   moveBall("home",true);
   hideSplash();
-  if(ORDER.includes(start)&&start!=="home")setTimeout(()=>go(start,{silent:true}),150);
+  if(ORDER.includes(start)&&start!=="home")setTimeout(()=>go(start,{silent:true,quiet:true}),150);
 }
 Promise.all([
   fetch("data.json",{cache:"no-store"}).then(r=>r.json()),
   fetch("posts.json",{cache:"no-store"}).then(r=>r.ok?r.json():{}).catch(()=>({}))
 ]).then(([d,p])=>{D=cleanData(d);POSTS=Array.isArray(p.posts)?p.posts:[];boot()})
- .catch(()=>{hideSplash();$("#hero").innerHTML='<div class="hero"><div class="kick">אין חיבור כרגע. נסו לרענן בעוד רגע.</div></div>'});
+ .catch(()=>{hideSplash();moveBall("home",true);$("#hero").innerHTML='<div class="hero"><div class="kick">אין חיבור כרגע. נסו לרענן בעוד רגע.</div></div>'});
