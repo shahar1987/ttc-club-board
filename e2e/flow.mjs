@@ -12,7 +12,8 @@ const field = (d, k) => { const f = d.fields[k] || {}; return f.stringValue ?? f
 const browser = await chromium.launch();
 const errors = [];
 let step = "start";
-const ok = (m) => console.log("✓ " + m);
+// logs are read through annotations (the raw log download is not reachable from every tool)
+const ok = (m) => console.log("::notice::✓ " + m);
 
 async function signIn(page, email, name) {
   const [pop] = await Promise.all([page.waitForEvent("popup"), page.click("#gateIn")]);
@@ -50,7 +51,7 @@ async function run(viewport, label) {
   assert.deepEqual(heats, ["4 ק״מ (משפחות)", "10 ק״מ", "21 ק״מ"]);
 
   step = "event-form";
-  await page.fill(".pp-row[data-i='0'] .f-birth", "31/12/1985");
+  await page.fill(".pp-row[data-i='0'] .f-birth", "31-12-85");
   await page.selectOption(".pp-row[data-i='0'] .f-heat", "10 ק״מ");
   await page.click("#ppAdd");
   await page.fill(".pp-row[data-i='1'] .f-first", "נועה");
@@ -86,5 +87,5 @@ try {
   assert.deepEqual(errors, [], "no page errors");
   console.log("\nכל הבדיקות עברו");
 } catch (e) {
-  console.error(`\n✗ נכשל בשלב ${step}: ${e.message}`); console.error(errors.join("\n")); process.exitCode = 1;
+  console.log(`::error::✗ נכשל בשלב ${step}: ${String(e.message).replace(/\n/g, " | ").slice(0, 900)}`); for (const x of errors.slice(0, 8)) console.log(`::warning::${x.replace(/\n/g, " ").slice(0, 400)}`); process.exitCode = 1;
 } finally { await browser.close(); }
