@@ -454,3 +454,15 @@ $("#pop").addEventListener("click",e=>{if(e.target.id==="pop")$("#popLater").cli
 addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#pop").hidden)$("#popLater").click()});
 function openEvent(){const p=activeEvent();if(!p)return;
   if(!ME.user)return toast("כדי להירשם, נכנסים קודם עם Google באזור האישי");if(!ME.member)return memberSheet();eventSheet(p,true)}
+
+/* ---------- push notifications: asked only on tap; on iPhone only inside the installed app (Apple's rule) ---------- */
+const VAPID=""; // public Web Push key from Firebase → Cloud Messaging → Web Push certificates
+const pushOk=()=>VAPID&&"Notification" in window&&"serviceWorker" in navigator&&"PushManager" in window&&(!isIOS||standalone);
+if(pushOk()&&Notification.permission==="default"&&!store.get("ttc_push_no"))introDone.then(()=>{$("#pushSec").hidden=false});
+$("#pushOn").onclick=async()=>{
+  const perm=await Notification.requestPermission(); // must be the first await, inside the tap
+  if(perm!=="granted"){store.set("ttc_push_no","1");$("#pushSec").hidden=true;return toast("אפשר להפעיל אחר כך מהגדרות הדפדפן")}
+  $("#pushOn").disabled=true;
+  const wait=()=>window.TTCAuth?Promise.resolve():new Promise(r=>addEventListener("ttc-auth-ready",r,{once:true}));
+  try{await wait();await TTCAuth.enablePush(VAPID,isIOS?"ios":DEV==="mobile"?"android":"desktop");$("#pushSec").hidden=true;toast("ההתראות הופעלו 🔔");track("click","push-on")}
+  catch(e){$("#pushOn").disabled=false;toast("לא הצלחנו להפעיל התראות במכשיר הזה")}};

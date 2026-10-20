@@ -1,5 +1,5 @@
 // Network first so parents always see fresh results; the cache only answers when there is no signal.
-const CACHE = "ttc-v11";
+const CACHE = "ttc-v12";
 const SHELL = ["./", "index.html", "app.js", "manifest.json", "icon-192.png", "icon-512.png", "logo.png", "mark.png", "data.json", "posts.json"];
 
 self.addEventListener("install", e => {
@@ -25,4 +25,23 @@ self.addEventListener("fetch", e => {
       return res;
     }).catch(() => caches.match(key.href).then(m => m || caches.match("index.html")))
   );
+});
+
+// Push from the club (FCM data message): show it, and open the app on tap.
+self.addEventListener("push", e => {
+  let d = {};
+  try { const p = e.data ? e.data.json() : {}; d = p.data || p; } catch (err) {}
+  const title = String(d.title || "מועדון טניס שולחן מבואות החרמון").slice(0, 60);
+  e.waitUntil(self.registration.showNotification(title, {
+    body: String(d.body || "").slice(0, 180), icon: "icon-192.png", badge: "icon-192.png", lang: "he", dir: "rtl",
+    data: { url: /^https:\/\/shahar1987\.github\.io\/ttc-club-board\//.test(d.url || "") ? d.url : "./" }
+  }));
+});
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const url = e.notification.data && e.notification.data.url || "./";
+  e.waitUntil(clients.matchAll({ type: "window", includeUncontrolled: true }).then(ws => {
+    const w = ws.find(c => c.url.startsWith(self.registration.scope));
+    return w ? w.focus().then(c => c.navigate ? c.navigate(url) : c) : clients.openWindow(url);
+  }));
 });
