@@ -150,7 +150,7 @@ function renderHome(){
       <div class="facts"><span>📅 ${dshort(n.d)}</span><span class="num">🕖 ${n.t}</span><span>📍 ${home?"בית ספר רמת כורזים":"משחק חוץ"}</span></div>
       <div class="count num" id="cd"></div></div>`;
     const tick=()=>{const el=$("#cd");if(!el)return;if(new Date()-T>3*3600e3){renderHome();return}let s=Math.max(0,Math.ceil((T-new Date())/6e4)*60);
-      el.innerHTML=s>0?[[Math.floor(s/86400),"ימים"],[Math.floor(s%86400/3600),"שעות"],[Math.floor(s%3600/60),"דקות"]].map(([v,l])=>`<span>${v}<small>${l}</small></span>`).join(""):`<span style="font-size:15px">המשחק התחיל · בהצלחה!</span>`};
+      el.innerHTML=s>0?[[Math.floor(s/86400),"ימים"],[Math.floor(s%86400/3600),"שעות"],[Math.floor(s%3600/60),"דקות"]].filter((x,i)=>i>0||x[0]>0).map(([v,l])=>`<span>${v}<small>${l}</small></span>`).join(""):`<span style="font-size:15px">המשחק התחיל · בהצלחה!</span>`};
     tick();clearInterval(renderHome.iv);renderHome.iv=setInterval(tick,30e3);
   }else $("#hero").innerHTML=`<div class="hero"><div class="kick"><span class="dot"></span>אין משחקים קרובים בלוח</div></div>`;
   const card=m=>{const us=ours(m.h)?m.h:m.a,opp=ours(m.h)?m.a:m.h,home=ours(m.h);let res="";
@@ -207,7 +207,7 @@ function renderLeague(dir){
     const ms=l.matches.filter(m=>ours(m.h)||ours(m.a)).sort((a,b)=>when(a.d,a.t)-when(b.d,b.t));
     const now=new Date(),nextIdx=ms.findIndex(m=>!played(m)&&when(m.d,m.t)>now-3*3600e3);
     v.innerHTML=`<div class="card" id="oursList">${ms.map((m,i)=>mrow(m).replace('class="mrow',`data-i="${i}" class="mrow`)).join("")}</div>`;
-    if(nextIdx>2){const el=v.querySelector(`[data-i="${nextIdx-1}"]`);el&&requestAnimationFrame(()=>el.scrollIntoView({block:"start"}))}
+    if(nextIdx>2){const el=v.querySelector(`[data-i="${nextIdx-1}"]`);el&&requestAnimationFrame(()=>{$("#s-leagues").scrollTop=el.getBoundingClientRect().top-$("#s-leagues").getBoundingClientRect().top+$("#s-leagues").scrollTop-130})}
   }else{
     v.innerHTML=l.ourTeams.map(t=>`<div class="team-h">${esc(D.teams[t])}</div><div class="chips">${(D.rosters[t]||[]).map(id=>{const p=D.players.find(x=>x.id===id);return p?`<button class="chip" data-pid="${id}">${esc(dn(p))}<i class="num">${p.pts?Math.round(p.pts):"—"}</i></button>`:""}).join("")}</div>`).join("");
   }
@@ -221,7 +221,7 @@ document.addEventListener("click",e=>{const c=e.target.closest(".mcard[data-lg]"
 function renderRank(){
   $("#rankSub").textContent=`דירוג ארצי · מתעדכן בסוף כל חודש · הבא ב-${D.nextRanking}`;
   const r=D.players.filter(p=>p.pts>0).sort((a,b)=>b.pts-a.pts),max=r[0]?r[0].pts:1;
-  const ini=n=>n.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join("");
+  const ini=n=>n.trim()[0]||"";
   const pod=(p,i)=>p?`<button class="pod p${i}" data-pid="${p.id}"><span class="av">${esc(ini(dn(p)))}</span><span class="nm">${esc(dn(p))}</span><span class="pt num">${p.pts.toFixed(0)} נק׳</span><span class="blk num">${i}</span></button>`:"<div></div>";
   $("#podium").innerHTML=pod(r[1],2)+pod(r[0],1)+pod(r[2],3);
   const arrow=p=>p.ch==null?"":p.ch===0?'<small class="same">ללא שינוי</small>':p.ch>0?`<small class="up">▲ ${p.ch}</small>`:`<small class="down">▼ ${-p.ch}</small>`;
@@ -238,7 +238,7 @@ function showPlayer(id){const p=D.players.find(x=>x.id===id);if(!p)return;
   const trend=p.ch==null?"—":p.ch===0?"יציב":p.ch>0?`▲ ${p.ch}`:`▼ ${-p.ch}`;
   openSheet(`<div class="pl-cat">${esc(CAT[p.c]||p.c)}${teamOf(id)?" · "+esc(teamOf(id)):""}</div><div class="pl-name">${esc(dn(p))}</div>
     <div class="pl-big"><b class="num" id="plRank">${p.rank?"#"+p.rank:"—"}</b><span>${p.rank?"מקום בדירוג הארצי":"עוד לא דורג. הדירוג נקבע אחרי משחקים רשמיים"}</span></div>
-    <div class="pl-grid"><div><small>נקודות</small><b class="num">${p.pts?p.pts.toFixed(1):"0"}</b></div><div><small>במועדון</small><b class="num">${club||"—"}</b></div><div><small>החודש</small><b class="${p.ch>0?"up":p.ch<0?"down":""}">${trend}</b></div></div>
+    <div class="pl-grid"><div><small>נקודות</small><b class="num">${p.pts?p.pts.toFixed(0):"0"}</b></div><div><small>במועדון</small><b class="num">${club||"—"}</b></div><div><small>החודש</small><b class="${p.ch>0?"up":p.ch<0?"down":""}">${trend}</b></div></div>
     <a class="link" href="https://www.tttm.co.il/p/${p.id}/" target="_blank" rel="noopener">כרטיס השחקן המלא באתר האיגוד</a>`);
   if(p.rank&&!RM.matches){const el=$("#plRank"),end=p.rank,t0=performance.now();const step=t=>{const k=Math.min(1,(t-t0)/750),e=1-Math.pow(1-k,3);el.textContent="#"+Math.round(end+(1-e)*500);if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step)}
   track("player",dn(p))}
