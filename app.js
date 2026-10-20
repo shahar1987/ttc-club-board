@@ -318,10 +318,12 @@ function hideSplash(){introDone.then(()=>{$("#splash").classList.add("gone");$("
 /* ---------- boot ---------- */
 // updates published by staff with the "boardPosts" permission (attendance app) — public read, no sign-in needed
 async function staffPosts(){try{
-  const r=await fetch("https://firestore.googleapis.com/v1/projects/ttcmh-2a752/databases/(default)/documents/boardPosts?pageSize=50&key=AIzaSyCmEVnBSkODaCZyrdEdO0vNQtvOnvgsQiA",{cache:"no-store"});
+  // only visible posts: the rules refuse anything else to the public
+  const r=await fetch("https://firestore.googleapis.com/v1/projects/ttcmh-2a752/databases/(default)/documents:runQuery?key=AIzaSyCmEVnBSkODaCZyrdEdO0vNQtvOnvgsQiA",{method:"POST",cache:"no-store",headers:{"content-type":"application/json"},
+    body:JSON.stringify({structuredQuery:{from:[{collectionId:"boardPosts"}],where:{fieldFilter:{field:{fieldPath:"hidden"},op:"EQUAL",value:{booleanValue:false}}},limit:100}})});
   if(!r.ok)return[];const j=await r.json();
   const v=f=>f?(f.stringValue??f.booleanValue??""):"";
-  return (j.documents||[]).map(d=>{const f=d.fields||{};return{id:"s:"+d.name.split("/").pop(),title:String(v(f.title)).slice(0,90),text:String(v(f.text)).slice(0,1200),banner:v(f.banner)===true,pin:v(f.pin)===true,hidden:v(f.hidden)===true,link:String(v(f.link)),linkText:String(v(f.linkText)).slice(0,30),date:String(v(f.date))}}).filter(x=>x.title);
+  return (Array.isArray(j)?j:[]).map(x=>x.document).filter(Boolean).map(d=>{const f=d.fields||{};return{id:"s:"+d.name.split("/").pop(),title:String(v(f.title)).slice(0,90),text:String(v(f.text)).slice(0,1200),banner:v(f.banner)===true,pin:v(f.pin)===true,hidden:v(f.hidden)===true,link:String(v(f.link)),linkText:String(v(f.linkText)).slice(0,30),date:String(v(f.date))}}).filter(x=>x.title);
 }catch(e){return[]}}
 function boot(){
   for(const f of [renderHome,renderPosts,renderLeagueTabs,()=>renderLeague(0),renderRank,renderClub])try{f()}catch(e){console.error(e)}
