@@ -1,0 +1,335 @@
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta property="og:title" content="מועדון טניס שולחן מבואות החרמון"><meta property="og:description" content="המשחק הבא, הליגות, הדירוג והאימונים של המועדון"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>לוח המועדון מבואות החרמון</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Secular+One&family=Rubik:wght@400;500;700;800&display=swap">
+<style>
+/* Layout: club-template bands — white crest header, dark-green "table" band with a slanted lime stripe, cream body, beige footer. One column, chip nav pinned on top. */
+:root{
+  --green:#0f4a33; --green-2:#16603f; --lime:#b7e24a; --bright:#29b864;
+  --cream:#f7f3e6; --paper:#fffdf6; --beige:#ece3cc;
+  --ink:#16261e; --muted:#5d6b62; --line:#ddd5bd; --win:#1f9d55; --loss:#c2413b;
+  --display:"Secular One","Rubik",system-ui,sans-serif; --body:"Rubik",system-ui,"Segoe UI",Arial,sans-serif;
+  --r:18px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --green:#0c3a29;--green-2:#14553a;--lime:#c3ea5e;--bright:#3fd07c;--cream:#121a16;--paper:#18231d;--beige:#1d2a22;
+  --ink:#ecf2ea;--muted:#9fb0a5;--line:#2c3d33;--win:#45c97c;--loss:#ef6b64;color-scheme:dark}}
+:root[data-theme="dark"]{--green:#0c3a29;--green-2:#14553a;--lime:#c3ea5e;--bright:#3fd07c;--cream:#121a16;--paper:#18231d;--beige:#1d2a22;
+  --ink:#ecf2ea;--muted:#9fb0a5;--line:#2c3d33;--win:#45c97c;--loss:#ef6b64;color-scheme:dark}
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+body{background:var(--cream);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--paper)}
+.wrap{direction:rtl;max-width:880px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:inherit}
+h2{font-family:var(--display);font-weight:400;font-size:clamp(24px,5vw,32px);line-height:1.15;margin:0;text-wrap:balance}
+.num{font-variant-numeric:tabular-nums}
+:focus-visible{outline:3px solid var(--bright);outline-offset:2px;border-radius:8px}
+
+/* crest header */
+.crest{background:var(--paper);border-bottom:1px solid var(--line)}
+.crest .wrap{display:flex;align-items:center;gap:14px;padding-block:14px}
+.ball{flex:none;width:46px;height:46px;border-radius:50%;background:var(--green);display:grid;place-items:center}
+.crest h1{font-family:var(--display);font-weight:400;font-size:clamp(17px,4.2vw,22px);line-height:1.2;margin:0;flex:1;min-width:0}
+.crest h1 span{color:var(--bright)}
+.soc{display:flex;gap:8px}
+.soc a{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:var(--green);color:#fff}
+.soc a:hover{background:var(--green-2)}
+
+/* sticky chip nav */
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--paper);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;gap:8px;overflow-x:auto;padding-block:10px;scrollbar-width:none}
+nav .wrap::-webkit-scrollbar{display:none}
+nav a{flex:none;text-decoration:none;font-weight:500;font-size:14px;padding:8px 14px;border-radius:999px;background:var(--cream);border:1px solid var(--line);white-space:nowrap}
+nav a.on{background:var(--green);color:#fff;border-color:var(--green)}
+
+/* hero band: the table */
+.band{background:var(--green);color:#fff;position:relative;overflow:hidden}
+.band::after{content:"";position:absolute;inset:auto -10% 0 -10%;height:22px;background:var(--lime);transform:skewY(-2.2deg);transform-origin:left bottom}
+.band .wrap{padding-block:26px 48px;position:relative;z-index:1}
+.kicker{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border-radius:999px;padding:5px 12px;font-size:13px;font-weight:500}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--lime)}
+.live .dot{animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.table{margin-top:16px;border:3px solid #fff;border-radius:6px;position:relative;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;min-height:170px;background:linear-gradient(var(--green-2),var(--green))}
+.table::before{content:"";position:absolute;top:50%;inset-inline:0;border-top:2px solid rgba(255,255,255,.55)}
+.table .net{position:absolute;inset-block:-8px;left:50%;width:4px;margin-left:-2px;background:repeating-linear-gradient(#fff 0 3px,transparent 3px 7px)}
+.side{position:relative;z-index:1;padding:18px 14px;text-align:center;min-width:0}
+.side b{display:block;font-family:var(--display);font-weight:400;font-size:clamp(19px,4.6vw,30px);line-height:1.15;overflow-wrap:anywhere}
+.side small{display:block;opacity:.8;margin-top:4px;font-size:13px}
+.side.us b{color:var(--lime)}
+.vs{position:relative;z-index:1;background:#fff;color:var(--green);font-family:var(--display);font-size:20px;width:52px;height:52px;border-radius:50%;display:grid;place-items:center}
+.meta{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:16px;font-size:15px}
+.meta div{display:flex;gap:6px;align-items:center}
+.count{display:flex;gap:8px;margin-top:14px}
+.count span{background:rgba(0,0,0,.22);border-radius:12px;padding:8px 10px;min-width:62px;text-align:center;font-weight:700;font-size:22px;line-height:1}
+.count small{display:block;font-weight:400;font-size:11px;opacity:.8;margin-top:4px}
+.after{margin-top:18px;display:grid;gap:8px}
+.after a{display:flex;justify-content:space-between;gap:12px;text-decoration:none;background:rgba(255,255,255,.08);border-radius:12px;padding:10px 14px;font-size:14px}
+.after a:hover{background:rgba(255,255,255,.14)}
+
+/* sections */
+main section{padding-block:34px 6px}
+.head{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.sub{color:var(--muted);font-size:14px;margin:4px 0 0}
+.pill{position:relative;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:12px 16px 12px 14px;padding-inline-start:18px;font-size:14px}
+.pill::before{content:"";position:absolute;inset-block:8px;inset-inline-start:0;width:5px;border-radius:4px;background:var(--lime)}
+.seg{display:inline-flex;background:var(--beige);border-radius:999px;padding:4px;gap:4px;flex-wrap:wrap}
+.seg button{border:0;background:none;font:inherit;font-weight:500;font-size:14px;padding:7px 14px;border-radius:999px;cursor:pointer;color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--green);color:#fff}
+.box{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.scroll{overflow-x:auto}
+table.st{width:100%;border-collapse:collapse;font-size:14px;min-width:420px}
+.st th{font-weight:500;color:var(--muted);text-align:center;padding:10px 6px;border-bottom:1px solid var(--line);font-size:12.5px}
+.st th:nth-child(2),.st td:nth-child(2){text-align:right}
+.st td{padding:10px 6px;text-align:center;border-bottom:1px solid var(--line)}
+.st tr:last-child td{border-bottom:0}
+.st tr.us td{background:color-mix(in srgb,var(--lime) 22%,transparent);font-weight:700}
+.st td.pts{font-weight:800}
+.pos{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--beige);font-weight:700;font-size:13px}
+.st tr.us .pos{background:var(--green);color:#fff}
+
+.league{display:grid;gap:16px}
+.roster{display:flex;flex-wrap:wrap;gap:8px}
+.roster h3{width:100%;margin:0;font-size:15px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer;font:inherit;color:var(--ink)}
+.chip:hover{border-color:var(--bright)}
+.chip i{font-style:normal;color:var(--muted);font-size:12px}
+.rounds{display:grid;gap:10px}
+.round{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.round h4{margin:0 0 6px;font-size:13px;color:var(--muted);font-weight:500}
+.m{display:grid;grid-template-columns:62px 1fr auto 1fr;gap:8px;align-items:center;padding:7px 0;border-top:1px dashed var(--line);font-size:14px}
+.m:first-of-type{border-top:0}
+.m .when{color:var(--muted);font-size:12.5px;line-height:1.25}
+.m .h{text-align:left}.m .a{text-align:right}
+.m .sc{min-width:52px;text-align:center;font-weight:800;background:var(--beige);border-radius:8px;padding:3px 8px}
+.m.mine .sc{background:var(--green);color:#fff}
+.m b.ourname{color:var(--bright)}
+.m .wn{font-weight:700}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;border-radius:6px;padding:1px 6px;margin-inline-start:4px}
+.tag.w{background:var(--win);color:#fff}.tag.l{background:var(--loss);color:#fff}
+
+/* rankings */
+.search{display:flex;gap:8px;margin-bottom:12px}
+.search input{flex:1;min-width:0;font:inherit;font-size:16px;padding:12px 16px;border-radius:999px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+.card{display:none;background:var(--green);color:#fff;border-radius:var(--r);padding:18px;margin-bottom:14px;position:relative;overflow:hidden}
+.card.show{display:block}
+.card .big{font-family:var(--display);font-size:clamp(40px,10vw,58px);line-height:1;color:var(--lime)}
+.card .cols{display:flex;flex-wrap:wrap;gap:18px 28px;margin-top:12px}
+.card .cols div small{display:block;opacity:.75;font-size:12px}
+.card .cols div b{font-size:19px}
+.card a{color:var(--lime)}
+.lb{display:grid}
+.row{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer;background:none;border-inline:0;border-top:0;font:inherit;color:inherit;text-align:right;width:100%}
+.row:last-child{border-bottom:0}
+.row:hover{background:color-mix(in srgb,var(--lime) 12%,transparent)}
+.row .rk{font-weight:800;color:var(--muted);font-size:13px;text-align:center}
+.row .nm{min-width:0}
+.row .nm b{display:block;font-weight:500}
+.bar{height:6px;border-radius:4px;background:var(--beige);margin-top:5px;overflow:hidden}
+.bar span{display:block;height:100%;background:linear-gradient(90deg,var(--bright),var(--lime))}
+.row .pt{text-align:left;font-weight:800}
+.row .pt small{display:block;font-weight:500;font-size:12px}
+.up{color:var(--win)}.down{color:var(--loss)}.same{color:var(--muted)}
+
+/* categories */
+.cats{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.cat{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.cat h3{margin:0 0 2px;font-size:17px}
+.cat p{margin:0 0 10px;color:var(--muted);font-size:13px}
+.cat ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.cat li{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.cat li i{font-style:normal;color:var(--muted);font-size:12.5px}
+
+/* training */
+.venues{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.venue{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.venue h3{margin:0 0 8px;font-family:var(--display);font-weight:400;font-size:20px;color:var(--green)}
+:root[data-theme="dark"] .venue h3{color:var(--lime)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .venue h3{color:var(--lime)}}
+.slot{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:8px 0;border-top:1px dashed var(--line);font-size:14px}
+.slot:first-of-type{border-top:0}
+.slot b{font-weight:700}
+.slot span{color:var(--muted);font-size:13px}
+.slot .t{text-align:left;font-weight:700}
+.events{display:grid;gap:8px;margin-top:14px}
+.events a{display:flex;gap:12px;align-items:center;text-decoration:none;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.events a:hover{border-color:var(--bright)}
+.events .d{background:var(--beige);border-radius:8px;padding:4px 8px;font-weight:700;font-size:13px}
+
+/* social */
+.socials{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.s-btn{display:flex;align-items:center;gap:14px;text-decoration:none;border-radius:var(--r);padding:16px 18px;color:#fff;font-weight:700;font-size:16px}
+.s-btn small{display:block;font-weight:400;opacity:.85;font-size:13px}
+.s-btn.fb{background:#1b5fd6}.s-btn.ig{background:linear-gradient(120deg,#7a3fd1,#d6337a 55%,#f08a2f)}.s-btn.wa{background:#1f9d55}
+.trial{margin-top:14px}
+
+footer{background:var(--beige);margin-top:40px}
+footer .wrap{padding-block:22px 28px;font-size:13px;color:var(--muted);display:grid;gap:8px}
+footer b{color:var(--ink)}
+.empty{padding:18px;color:var(--muted);text-align:center}
+@media (max-width:520px){
+  .m{grid-template-columns:52px 1fr auto 1fr;font-size:13px}
+  .table{min-height:150px}.vs{width:42px;height:42px;font-size:16px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
+</style>
+
+<div dir="rtl">
+<header class="crest"><div class="wrap">
+  <div class="ball" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 26 26"><circle cx="9" cy="9" r="6" fill="#fff"/><path d="M14 13l9 9" stroke="#b7e24a" stroke-width="4" stroke-linecap="round"/><circle cx="17" cy="16" r="6" fill="none" stroke="#b7e24a" stroke-width="3"/></svg></div>
+  <h1>מועדון טניס שולחן מבואות החרמון <span>ע"ש רוני גלבוע</span></h1>
+  <div class="soc">
+    <a href="https://www.facebook.com/TTCMH" target="_blank" rel="noopener" aria-label="פייסבוק"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M14 8h3V4h-3c-2.8 0-4.5 1.8-4.5 4.6V11H7v4h2.5v9h4v-9h3l.5-4h-3.5V8.8c0-.5.3-.8.5-.8z"/></svg></a>
+    <a href="https://www.instagram.com/ttcmhr" target="_blank" rel="noopener" aria-label="אינסטגרם"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg></a>
+  </div>
+</div></header>
+
+<nav aria-label="ניווט"><div class="wrap">
+  <a href="#next" class="on">המשחק הבא</a>
+  <a href="#leumit">ליגה לאומית</a>
+  <a href="#alef">ליגה א'</a>
+  <a href="#rank">דירוג אישי</a>
+  <a href="#players">שחקנים</a>
+  <a href="#train">אימונים ופעילות</a>
+  <a href="#social">פייסבוק ואינסטגרם</a>
+</div></nav>
+
+<section class="band" id="next"><div class="wrap" id="hero">
+  <span class="kicker"><span class="dot"></span>טוען את המשחק הבא…</span>
+</div></section>
+
+<main class="wrap">
+  <section id="leumit"></section>
+  <section id="alef"></section>
+
+  <section id="rank">
+    <div class="head"><div><h2>דירוג אישי</h2><p class="sub" id="rankSub"></p></div></div>
+    <div class="search"><input id="q" type="search" placeholder="חפשו שחקן לפי שם" autocomplete="off" aria-label="חיפוש שחקן"></div>
+    <div class="card" id="pcard" aria-live="polite"></div>
+    <div class="box lb" id="lb"></div>
+  </section>
+
+  <section id="players">
+    <div class="head"><div><h2>השחקנים שלנו לפי קטגוריה</h2><p class="sub">כל מי שרשום במועדון באיגוד, מסודר לפי גיל</p></div></div>
+    <div class="cats" id="cats"></div>
+  </section>
+
+  <section id="train">
+    <div class="head"><div><h2>אימונים ופעילות</h2><p class="sub">שלושה מוקדי אימון, כל השבוע</p></div></div>
+    <div class="venues" id="venues"></div>
+    <div class="pill trial">אימון ניסיון חינם לכולם, בכל מועד אימון, בלי התחייבות. לפרטים והצטרפות: <b class="num">050-4999149</b></div>
+    <h3 style="margin:22px 0 0;font-size:17px">תחרויות קרובות באיגוד</h3>
+    <div class="events" id="events"></div>
+  </section>
+
+  <section id="social">
+    <div class="head"><div><h2>כל מה שקורה במועדון</h2><p class="sub">תמונות, סרטונים ועדכונים מהאימונים והמשחקים</p></div></div>
+    <div class="socials">
+      <a class="s-btn fb" href="https://www.facebook.com/TTCMH" target="_blank" rel="noopener"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M14 8h3V4h-3c-2.8 0-4.5 1.8-4.5 4.6V11H7v4h2.5v9h4v-9h3l.5-4h-3.5V8.8c0-.5.3-.8.5-.8z"/></svg><span>פייסבוק<small>העמוד של המועדון</small></span></a>
+      <a class="s-btn ig" href="https://www.instagram.com/ttcmhr" target="_blank" rel="noopener"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/></svg><span>אינסטגרם<small>@ttcmhr</small></span></a>
+      <a class="s-btn wa" href="https://wa.me/972504999149" target="_blank" rel="noopener"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.7 15l-1.3 5 5.1-1.3A10 10 0 1 0 12 2zm5.4 14.2c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2.1 1-2.4c.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5l.9 2.1c.1.2.1.4 0 .6l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.7-.1l2 1c.3.1.5.2.5.4.1.1.1.7-.1 1.3z"/></svg><span>וואטסאפ<small class="num">050-4999149</small></span></a>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap">
+  <div>בשיתוף <b>מתנ"ס אזורי מבואות החרמון</b> ו<b>מועצה אזורית מבואות החרמון</b></div>
+  <div id="upd"></div>
+  <div>נתוני ליגה ודירוג: <a href="https://www.tttm.co.il/c/160/" target="_blank" rel="noopener">אתר האיגוד לטניס שולחן</a>. התוצאות מתעדכנות כאן אחת לשבוע, הדירוג אחרי כל פרסום חודשי.</div>
+</div></footer>
+</div>
+
+<script>
+const CAT={S:"בוגרים",S40:"ותיקים +40",S50:"ותיקים +50",S60:"ותיקים +60",S70:"ותיקים +70",J19:"נוער עד 19",Y17:"נוער עד 17",C14:"עד 15",C15:"עד 15",M13:"עד 13",M12:"עד 13",B11:"ילדים עד 11",B10:"ילדים עד 11",B9:"ילדים עד 11"};
+const GROUPS=[["ילדים","עד גיל 11",c=>/^B/.test(c)],["צעירים","עד גיל 15",c=>/^[MC]/.test(c)],["נוער","עד גיל 19",c=>/^[JY]/.test(c)],["בוגרים","",c=>c==="S"],["ותיקים","40 ומעלה",c=>/^S\d/.test(c)]];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let D;
+// shortcut: dates are read as the viewer's local clock; fine while viewers are in Israel
+const when=(d,t)=>{const[dd,mm,yy]=d.split("/");const[h,mi]=(t||"00:00").split(":");return new Date(2000+ +yy,mm-1,+dd,+h,+mi)};
+const DAYS=["א׳","ב׳","ג׳","ד׳","ה׳","ו׳","ש׳"];
+const nice=(d,t)=>{const x=when(d,t);return `יום ${DAYS[x.getDay()]} ${x.getDate()}.${x.getMonth()+1}`};
+const ours=c=>D.ours.includes(c);
+const short=c=>D.teams[c].replace("הפועל מבואות חרמון","מבואות חרמון").replace("כרמל מרכזי טניס שולחן חיפה","כרמל חיפה").replace("עירוני מעלות תרשיחא","מעלות תרשיחא").replace("עמותת קריית מוצקין","קריית מוצקין").replace("הפועל עירוני ","");
+const played=m=>!!m.res;
+
+function hero(){
+  const all=D.leagues.flatMap(l=>l.matches.filter(m=>ours(m.h)||ours(m.a)).map(m=>({...m,lg:l})));
+  const now=new Date(), soon=all.filter(m=>!played(m)&&when(m.d,m.t)>now-3*3600e3).sort((a,b)=>when(a.d,a.t)-when(b.d,b.t));
+  const n=soon[0];
+  if(!n){$("#hero").innerHTML=`<span class="kicker"><span class="dot"></span>אין משחקים קרובים בלוח</span>`;return}
+  const T=when(n.d,n.t), today=T.toDateString()===now.toDateString(), home=ours(n.h);
+  const side=c=>`<div class="side${ours(c)?" us":""}"><b>${esc(short(c))}</b><small>${c===n.h?"בית":"חוץ"}</small></div>`;
+  $("#hero").innerHTML=`
+   <span class="kicker${today?" live":""}"><span class="dot"></span>${today?"היום משחקים!":"המשחק הבא שלנו"} · ${esc(n.lg.name)}, ${esc(n.lg.group)}</span>
+   <div class="table" role="img" aria-label="${esc(D.teams[n.h])} נגד ${esc(D.teams[n.a])}"><span class="net"></span>${side(n.h)}<div class="vs">VS</div>${side(n.a)}</div>
+   <div class="meta"><div>📅 ${nice(n.d)}</div><div>🕖 <span class="num">${n.t}</span></div><div>📍 ${home?"משחק בית · בית ספר רמת כורזים":"משחק חוץ"}</div><div>מחזור ${n.r}</div></div>
+   <div class="count num" id="cd" aria-label="ספירה לאחור"></div>
+   <div class="after">${soon.slice(1,4).map(m=>`<a href="#${m.lg.id}"><span>${esc(short(m.h))} – ${esc(short(m.a))}</span><span class="num">${nice(m.d)} · ${m.t}</span></a>`).join("")}</div>`;
+  const tick=()=>{let s=Math.max(0,(T-new Date())/1e3);const p=[[Math.floor(s/86400),"ימים"],[Math.floor(s%86400/3600),"שעות"],[Math.floor(s%3600/60),"דקות"]];
+    $("#cd").innerHTML=s>0?p.map(([v,l])=>`<span>${v}<small>${l}</small></span>`).join(""):`<span style="font-size:16px">המשחק התחיל</span>`};
+  tick();setInterval(tick,30e3);
+}
+
+function league(l){
+  const sec=document.getElementById(l.id);
+  const st=l.standings.map((r,i)=>`<tr class="${ours(r.t)?"us":""}"><td><span class="pos">${i+1}</span></td><td>${esc(short(r.t))}</td><td class="num">${r.p}</td><td class="num">${r.w}</td><td class="num">${r.d}</td><td class="num">${r.l}</td><td class="num pts">${r.pts}</td></tr>`).join("");
+  const rosters=l.ourTeams.map(t=>`<div class="roster"><h3>${esc(D.teams[t])}</h3>${(D.rosters[t]||[]).map(id=>{const p=D.players.find(x=>x.id===id);return p?`<button class="chip" data-pid="${id}">${esc(p.n)} <i class="num">${p.pts?p.pts.toFixed(0):"—"}</i></button>`:""}).join("")}</div>`).join("");
+  sec.innerHTML=`<div class="head"><div><h2>${esc(l.name)}</h2><p class="sub">${esc(l.group)} · עונת 2026/27 · <a href="${l.url}" target="_blank" rel="noopener">באתר האיגוד</a></p></div>
+    <div class="seg" role="group" aria-label="תצוגת משחקים"><button aria-pressed="true" data-f="ours">המשחקים שלנו</button><button aria-pressed="false" data-f="all">כל הליגה</button></div></div>
+    <div class="league"><div class="box scroll"><table class="st"><thead><tr><th>#</th><th>קבוצה</th><th>מש׳</th><th>נצ׳</th><th>תיקו</th><th>הפ׳</th><th>נק׳</th></tr></thead><tbody>${st}</tbody></table></div>
+    ${rosters}<div class="rounds"></div></div>`;
+  const draw=f=>{
+    const ms=l.matches.filter(m=>f==="all"||ours(m.h)||ours(m.a)).sort((a,b)=>a.r-b.r||when(a.d,a.t)-when(b.d,b.t));
+    const by={};ms.forEach(m=>(by[m.r]=by[m.r]||[]).push(m));
+    sec.querySelector(".rounds").innerHTML=Object.keys(by).map(r=>`<div class="round"><h4>מחזור ${r}</h4>${by[r].map(m=>{
+      const mine=ours(m.h)||ours(m.a), nm=c=>`<span class="${m.w===c?"wn":""}">${ours(c)?`<b class="ourname">${esc(short(c))}</b>`:esc(short(c))}</span>`;
+      let tag="";if(mine&&played(m)){const us=ours(m.h)?m.h:m.a;tag=m.w===us?'<span class="tag w">ניצחון</span>':m.w?'<span class="tag l">הפסד</span>':""}
+      return `<div class="m${mine?" mine":""}"><div class="when num">${nice(m.d)}<br>${m.t}</div><div class="h">${nm(m.h)}</div><div class="sc num">${played(m)?esc(m.res):"–"}</div><div class="a">${nm(m.a)}${tag}</div></div>`}).join("")}</div>`).join("")||`<div class="empty">אין משחקים להצגה</div>`;
+  };
+  sec.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{sec.querySelectorAll(".seg button").forEach(x=>x.setAttribute("aria-pressed",x===b));draw(b.dataset.f)});
+  draw("ours");
+}
+
+function teamOf(id){for(const t in D.rosters)if(D.rosters[t].includes(id))return D.teams[t];return null}
+function showPlayer(id){
+  const p=D.players.find(x=>x.id===id);if(!p)return;
+  const ch=p.ch==null?"":p.ch===0?"ללא שינוי בחודש האחרון":p.ch>0?`עלה ${p.ch} מקומות`:`ירד ${-p.ch} מקומות`;
+  const club=D.players.filter(x=>x.pts>0).sort((a,b)=>b.pts-a.pts).findIndex(x=>x.id===id)+1;
+  const c=$("#pcard");
+  c.innerHTML=`<div style="font-size:14px;opacity:.85">${esc(CAT[p.c]||p.c)}${teamOf(id)?" · "+esc(teamOf(id)):""}</div>
+   <div style="font-family:var(--display);font-size:26px;margin:2px 0 10px">${esc(p.n)}</div>
+   <div class="big num">${p.rank?"#"+p.rank:"טרם דורג"}</div><div style="font-size:13px;opacity:.85">${p.rank?"מקום בדירוג הארצי לגברים":"הדירוג נקבע אחרי המשחקים הרשמיים הראשונים"}</div>
+   <div class="cols"><div><small>נקודות דירוג</small><b class="num">${p.pts?p.pts.toFixed(1):"0"}</b></div>${club?`<div><small>מקום במועדון</small><b class="num">${club}</b></div>`:""}${ch?`<div><small>מגמה</small><b>${ch}</b></div>`:""}</div>
+   <div style="margin-top:12px;font-size:13px"><a href="https://www.tttm.co.il/p/${p.id}/" target="_blank" rel="noopener">כרטיס השחקן המלא באתר האיגוד</a></div>`;
+  c.classList.add("show");c.scrollIntoView({behavior:"smooth",block:"center"});
+}
+function ranks(){
+  $("#rankSub").textContent=`הדירוג הארצי מתעדכן בסוף כל חודש. העדכון הבא צפוי ב-${D.nextRanking}`;
+  const r=D.players.filter(p=>p.pts>0).sort((a,b)=>b.pts-a.pts), max=r[0]?r[0].pts:1;
+  const arrow=p=>p.ch==null?"":p.ch===0?'<small class="same">ללא שינוי</small>':p.ch>0?`<small class="up">▲ ${p.ch}</small>`:`<small class="down">▼ ${-p.ch}</small>`;
+  $("#lb").innerHTML=r.map((p,i)=>`<button class="row" data-pid="${p.id}"><span class="rk num">${i+1}</span><span class="nm"><b>${esc(p.n)}</b><span style="color:var(--muted);font-size:12.5px">${esc(CAT[p.c]||p.c)}${p.rank?` · מקום ${p.rank} בארץ`:""}</span><div class="bar"><span style="width:${(p.pts/max*100).toFixed(1)}%"></span></div></span><span class="pt num">${p.pts.toFixed(1)}${arrow(p)}</span></button>`).join("");
+  $("#q").oninput=e=>{const v=e.target.value.trim();if(v.length<2)return;const p=D.players.find(x=>x.n.includes(v));if(p)showPlayer(p.id)};
+}
+function cats(){
+  $("#cats").innerHTML=GROUPS.map(([t,s,f])=>{const ps=D.players.filter(p=>f(p.c)).sort((a,b)=>b.pts-a.pts);if(!ps.length)return"";
+    return `<div class="cat"><h3>${t} <span class="num" style="color:var(--muted);font-weight:400">(${ps.length})</span></h3><p>${s||"&nbsp;"}</p><ul>${ps.map(p=>`<li><button class="chip" data-pid="${p.id}" style="border:0;padding:0;background:none">${esc(p.n)}</button><i class="num">${p.pts?p.pts.toFixed(0)+" נק׳":esc(CAT[p.c]||"")}</i></li>`).join("")}</ul></div>`}).join("");
+}
+function train(){
+  $("#venues").innerHTML=D.training.map(v=>`<div class="venue"><h3>${esc(v.v)}</h3>${v.g.map(([g,d,t,c])=>`<div class="slot"><b>${esc(g)}</b><span class="t num">${t}</span><span>ימים ${esc(d)}</span><span>מאמן: ${esc(c)}</span></div>`).join("")}</div>`).join("");
+  const now=new Date();
+  $("#events").innerHTML=D.events.filter(e=>when(e[0],"23:59")>=now).map(([d,n,u])=>`<a href="${u}" target="_blank" rel="noopener"><span class="d num">${nice(d)}</span><span>${esc(n)}</span></a>`).join("")||`<div class="empty">אין תחרויות קרובות כרגע</div>`;
+}
+function wireNav(){
+  const links=[...document.querySelectorAll("nav a")];
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)links.forEach(a=>a.classList.toggle("on",a.getAttribute("href")==="#"+e.target.id))}),{rootMargin:"-40% 0px -55% 0px"});
+  links.forEach(a=>{const s=document.querySelector(a.getAttribute("href"));if(s)io.observe(s)});
+  document.addEventListener("click",e=>{const b=e.target.closest("[data-pid]");if(b)showPlayer(+b.dataset.pid)});
+}
+fetch("data.json",{cache:"no-store"}).then(r=>r.json()).then(d=>{D=d;
+  hero();D.leagues.forEach(league);ranks();cats();train();wireNav();
+  $("#upd").textContent="עודכן לאחרונה: "+new Date(D.updated).toLocaleString("he-IL",{dateStyle:"long",timeStyle:"short"});
+  if(location.hash){const s=document.querySelector(location.hash);if(s)s.scrollIntoView()}
+}).catch(()=>{$("#hero").innerHTML='<span class="kicker">לא הצלחנו לטעון את הנתונים. רעננו את הדף בעוד רגע.</span>'});
+</script>
+</body></html>
