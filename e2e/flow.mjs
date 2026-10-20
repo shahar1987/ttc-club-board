@@ -51,11 +51,14 @@ async function run(viewport, label) {
   assert.deepEqual(heats, ["4 ק״מ (משפחות)", "10 ק״מ", "21 ק״מ"]);
 
   step = "event-form";
-  await page.fill(".pp-row[data-i='0'] .f-birth", "31-12-85");
+  await page.selectOption(".pp-row[data-i='0'] .f-bd", "31"); await page.selectOption(".pp-row[data-i='0'] .f-bm", "2"); await page.selectOption(".pp-row[data-i='0'] .f-by", "1985");
+  await page.fill("#evCity", "שניר"); await page.click("#evSave");
+  assert.match(await page.textContent("#evErr"), /לא קיים/); ok(`${label}: תאריך שלא קיים (31 בפברואר) נעצר עם הסבר`);
+  await page.selectOption(".pp-row[data-i='0'] .f-bm", "12");
   await page.selectOption(".pp-row[data-i='0'] .f-heat", "10 ק״מ");
   await page.click("#ppAdd");
   await page.fill(".pp-row[data-i='1'] .f-first", "נועה");
-  await page.fill(".pp-row[data-i='1'] .f-birth", "1.2.2015");
+  await page.selectOption(".pp-row[data-i='1'] .f-bd", "1"); await page.selectOption(".pp-row[data-i='1'] .f-bm", "2"); await page.selectOption(".pp-row[data-i='1'] .f-by", "2015");
   await page.selectOption(".pp-row[data-i='1'] .f-gender", "נ");
   await page.selectOption(".pp-row[data-i='1'] .f-shirt", "ילדים 10");
   await page.fill("#evCity", "שניר");
@@ -67,7 +70,7 @@ async function run(viewport, label) {
   if (mine.length < 2) { await shot("4-error"); throw new Error(`saved ${mine.length}/2; form says: "${await page.textContent("#evErr").catch(() => "")}"`); }
   assert.equal(mine.length, 2, "two signups saved");
   const kid = mine.find((d) => field(d, "firstName") === "נועה");
-  assert.equal(field(kid, "lastName"), "כהן"); assert.equal(field(kid, "birth"), "1.2.2015"); assert.equal(field(kid, "heat"), "4 ק״מ (משפחות)");
+  assert.equal(field(kid, "lastName"), "כהן"); assert.equal(field(kid, "birth"), "1.2.2015"); assert.equal(field(mine.find((d) => field(d, "firstName") !== "נועה"), "birth"), "31.12.1985"); assert.equal(field(kid, "heat"), "4 ק״מ (משפחות)");
   ok(`${label}: הרשמה של שני משתתפים נשמרה עם כל הפרטים`);
 
   step = "registered-view"; await page.waitForTimeout(800);

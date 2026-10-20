@@ -427,16 +427,20 @@ if(SIGNIN_ON){introDone.then(()=>setTimeout(startAuth,300));addEventListener("lo
 /* ---------- event popup: after a member finished joining, an active event post pops up once with one-tap registration ---------- */
 const SHIRTS=["XS","S","M","L","XL","XXL","ילדים 6","ילדים 8","ילדים 10","ילדים 12","ילדים 14"];
 const BIRTH_OK=v=>/^\d{1,2}[./]\d{1,2}[./]\d{4}$/.test(v);
-// accept how people actually type a date: 31/12/1985, 31-12-1985, 31.12.85, 31 12 1985
-function normBirth(v){const m=String(v).trim().match(/^(\d{1,2})\D+(\d{1,2})\D+(\d{2}|\d{4})$/);if(!m)return String(v).trim();
-  let y=m[3];if(y.length===2)y=(+y<=new Date().getFullYear()%100?"20":"19")+y;return `${+m[1]}.${+m[2]}.${y}`}
+// birth date as three pickers (day / month / year): nothing to type, no format to get wrong
+const MONTHS=["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
+function bdSel(v){const m=String(v||"").match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/)||[],Y=new Date().getFullYear(),o=(cls,lab,ph,list,cur)=>`<select class="${cls}" aria-label="${lab}"><option value="">${ph}</option>${list.map(([val,t])=>`<option value="${val}"${String(val)===String(cur)?" selected":""}>${t}</option>`).join("")}</select>`;
+  return o("f-bd","יום","יום",Array.from({length:31},(_,i)=>[i+1,i+1]),m[1]&&+m[1])+o("f-bm","חודש","חודש",MONTHS.map((n,i)=>[i+1,n]),m[2]&&+m[2])+o("f-by","שנה","שנה",Array.from({length:Y-1919},(_,i)=>[Y-i,Y-i]),m[3])}
+function birthOf(r){const d=r.querySelector(".f-bd").value,m=r.querySelector(".f-bm").value,y=r.querySelector(".f-by").value;
+  if(!d||!m||!y)return"";const t=new Date(+y,+m-1,+d);return t.getMonth()===+m-1?`${d}.${m}.${y}`:"bad"}
 function activeEvent(){const today=new Date().toISOString().slice(0,10);
   return (POSTS||[]).find(p=>p&&!p.hidden&&p.popup&&/^[a-z0-9-]{3,40}$/.test(p.popup.event||"")&&(!p.popup.until||p.popup.until>=today))}
 function personRow(i,p,heats){const opt=(arr,v)=>arr.map(x=>`<option${x===v?" selected":""}>${esc(x)}</option>`).join("");
   return `<fieldset class="pp-row" data-i="${i}"><legend>${i===0?"אני":"משתתף/ת "+(i+1)}${i>0?' <button type="button" class="linkbtn pp-del" aria-label="הסרה">הסרה</button>':""}</legend>
   <div class="two"><label>שם פרטי<input type="text" class="f-first" maxlength="40" value="${esc(p.firstName||"")}"></label><label>שם משפחה<input type="text" class="f-last" maxlength="40" value="${esc(p.lastName||"")}"></label></div>
   <div class="two"><label>מקצה<select class="f-heat">${opt(heats,p.heat||heats[0])}</select></label><label>מגדר<select class="f-gender"><option value="ז"${p.gender==="ז"?" selected":""}>זכר</option><option value="נ"${p.gender==="נ"?" selected":""}>נקבה</option></select></label></div>
-  <div class="two"><label>תאריך לידה<input type="text" class="f-birth" inputmode="numeric" placeholder="31.12.1985" maxlength="10" value="${esc(p.birth||"")}"></label><label>מידת חולצה<select class="f-shirt">${opt(SHIRTS,p.shirt||"M")}</select></label></div></fieldset>`}
+  <label>תאריך לידה<div class="bd">${bdSel(p.birth)}</div></label>
+  <label>מידת חולצה<select class="f-shirt">${opt(SHIRTS,p.shirt||"M")}</select></label></fieldset>`}
 async function eventSheet(post,force,fromPop){
   const ev=post.popup,hs=(Array.isArray(ev.heats)?ev.heats:[]).filter(x=>typeof x==="string"&&x&&x.length<=20).slice(0,6),heats=hs.length?hs:["4 ק״מ"];
   let mine=[];try{mine=await TTCAuth.mySignups(ev.event)}catch(e){}
@@ -462,9 +466,9 @@ async function eventSheet(post,force,fromPop){
   $("#evLater").onclick=()=>{store.set("ttc_pop_"+ev.event,String(Date.now()));closeSheet()};
   $("#evForm").onsubmit=async e=>{e.preventDefault();const err=$("#evErr");err.textContent="";
     const city=$("#evCity").value.trim();
-    const people=[...rows.querySelectorAll(".pp-row")].map(r=>({firstName:r.querySelector(".f-first").value.trim(),lastName:r.querySelector(".f-last").value.trim(),heat:r.querySelector(".f-heat").value,gender:r.querySelector(".f-gender").value,birth:normBirth(r.querySelector(".f-birth").value),shirt:r.querySelector(".f-shirt").value,city,phone:ME.member.phone}));
+    const people=[...rows.querySelectorAll(".pp-row")].map(r=>({firstName:r.querySelector(".f-first").value.trim(),lastName:r.querySelector(".f-last").value.trim(),heat:r.querySelector(".f-heat").value,gender:r.querySelector(".f-gender").value,birth:birthOf(r),shirt:r.querySelector(".f-shirt").value,city,phone:ME.member.phone}));
     const bad=people.findIndex(p=>!p.firstName||!p.lastName||!BIRTH_OK(p.birth));
-    if(bad>=0)return err.textContent=`חסר שם או תאריך לידה (בפורמט 31.12.1985) אצל ${bad===0?"המשתתף הראשון":"משתתף "+(bad+1)}.`;
+    if(bad>=0){const p=people[bad],who=bad===0?"המשתתף הראשון":"משתתף "+(bad+1);return err.textContent=!p.firstName||!p.lastName?`חסר שם פרטי או שם משפחה אצל ${who}.`:p.birth==="bad"?`התאריך שנבחר לא קיים (למשל 31 בפברואר) אצל ${who}.`:`צריך לבחור יום, חודש ושנת לידה אצל ${who}.`}
     if(!city)return err.textContent="חסרה עיר / יישוב.";
     $("#evSave").disabled=true;
     try{await TTCAuth.signUp(ev.event,people,ME.member.name);closeSheet();toast("נרשמתם! 🎉");track("click","event:"+ev.event)}
