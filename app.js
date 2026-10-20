@@ -344,7 +344,7 @@ function boot(){
   const start=(location.hash||"").slice(1);
   moveBall("home",true);
   hideSplash();
-  introDone.then(()=>setTimeout(maybePopup,1200)); // the event popup needs only the posts, not the Firebase bundle
+  introDone.then(()=>setTimeout(maybePopup,250)); // the event popup needs only the posts, not the Firebase bundle
   if(ORDER.includes(start)&&start!=="home")setTimeout(()=>go(start,{silent:true,quiet:true}),150);
 }
 Promise.all([
@@ -500,8 +500,8 @@ function showPop(post,opts={}){const img=opts.img||(IMG_OK.test(post.img||"")?po
   popReturn=document.activeElement;const el=$("#pop");el.hidden=false;el.classList.add("on");requestAnimationFrame(()=>$("#popCard").focus({preventScroll:true}));track("post","popup:"+(post.popup?post.popup.event:"invite"))}
 function hidePop(){const el=$("#pop");el.hidden=true;el.classList.remove("on");popReturn&&popReturn.focus&&popReturn.focus({preventScroll:true})}
 async function maybePopup(){const p=activeEvent();if(!p||!$("#pop").hidden)return;
-  const later=+store.get("ttc_pop_"+p.popup.event)||0;if(Date.now()-later<2*86400e3)return; // "not now" waits two days
-  if(sheet.hidden)showPop(p)}
+  if(sheet.hidden)showPop(p)} // every entry shows it; "not now" only closes it for this visit
+let popAway=0;document.addEventListener("visibilitychange",()=>{if(document.hidden)popAway=Date.now();else if(popAway&&Date.now()-popAway>60e3)maybePopup()}); // an installed app resumes instead of reloading
 $("#popGo").onclick=()=>{hidePop();if(popAction)return popAction();openEvent()};
 $("#popLater").onclick=$("#popX").onclick=()=>{if(popLaterFn){popLaterFn();return hidePop()}const p=activeEvent();if(p)store.set("ttc_pop_"+p.popup.event,String(Date.now()));hidePop()};
 $("#pop").addEventListener("click",e=>{if(e.target.id==="pop")$("#popLater").click()});
