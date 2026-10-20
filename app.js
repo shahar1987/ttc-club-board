@@ -20,7 +20,7 @@ const CAT={S:"בוגרים",S40:"ותיקים 40+",S50:"ותיקים 50+",S60:"�
 const AGES=[["ילדים","עד גיל 11",c=>/^B/.test(c)],["צעירים","עד גיל 15",c=>/^[MC]/.test(c)],["נוער","עד גיל 19",c=>/^[JY]/.test(c)],["בוגרים","",c=>c==="S"],["ותיקים","40 ומעלה",c=>/^S\d/.test(c)]];
 const DAYS=["א׳","ב׳","ג׳","ד׳","ה׳","ו׳","ש׳"];
 let D=null,POSTS=[];
-if(top!==self)try{top.location=location.href}catch(e){} // no framing of the board
+if(top!==self){try{top.location=location.href}catch(e){}document.documentElement.innerHTML="";throw new Error("framed")} // no framing of the board
 const safeUrl=u=>/^https:\/\/[^\s"'<>]+$/.test(u||"")?u:"#";
 const pick=(v,re,d="")=>typeof v==="string"&&re.test(v)?v:d;
 const num=(v,d=0)=>v!==null&&v!==""&&Number.isFinite(+v)?+v:d;
@@ -409,7 +409,7 @@ function personRow(i,p,heats){const opt=(arr,v)=>arr.map(x=>`<option${x===v?" se
   <div class="two"><label>מקצה<select class="f-heat">${opt(heats,p.heat||heats[0])}</select></label><label>מגדר<select class="f-gender"><option value="ז"${p.gender==="ז"?" selected":""}>זכר</option><option value="נ"${p.gender==="נ"?" selected":""}>נקבה</option></select></label></div>
   <div class="two"><label>תאריך לידה<input type="text" class="f-birth" inputmode="numeric" placeholder="31.12.1985" maxlength="10" value="${esc(p.birth||"")}"></label><label>מידת חולצה<select class="f-shirt">${opt(SHIRTS,p.shirt||"M")}</select></label></div></fieldset>`}
 async function eventSheet(post,force){
-  const ev=post.popup,heats=(ev.heats&&ev.heats.length?ev.heats:["4 ק״מ"]).slice(0,6);
+  const ev=post.popup,hs=(Array.isArray(ev.heats)?ev.heats:[]).filter(x=>typeof x==="string"&&x&&x.length<=20).slice(0,6),heats=hs.length?hs:["4 ק״מ"];
   let mine=[];try{mine=await TTCAuth.mySignups(ev.event)}catch(e){}
   const img=/^img\/[\w.-]+$/.test(post.img||"")?post.img:"";
   if(mine.length){if(!force)return;openSheet(`${img?`<img class="post-img" src="${img}" alt="">`:""}<h2 class="post-h">${esc(post.title)}</h2><div class="post-t">אתם רשומים ✅\n${mine.map(m=>`${esc(m.firstName)} ${esc(m.lastName)} · ${esc(m.heat)}`).join("\n")}</div><button class="linkbtn" id="evCancel" type="button">ביטול ההרשמה</button>`);
