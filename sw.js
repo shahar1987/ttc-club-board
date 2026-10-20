@@ -1,5 +1,5 @@
 // Network first so parents always see fresh results; the cache only answers when there is no signal.
-const CACHE = "ttc-v12";
+const CACHE = "ttc-v13";
 const SHELL = ["./", "index.html", "app.js", "manifest.json", "icon-192.png", "icon-512.png", "logo.png", "mark.png", "data.json", "posts.json"];
 
 self.addEventListener("install", e => {
@@ -34,7 +34,7 @@ self.addEventListener("push", e => {
   const title = String(d.title || "מועדון טניס שולחן מבואות החרמון").slice(0, 60);
   e.waitUntil(self.registration.showNotification(title, {
     body: String(d.body || "").slice(0, 180), icon: "icon-192.png", badge: "icon-192.png", lang: "he", dir: "rtl",
-    data: { url: /^https:\/\/shahar1987\.github\.io\/ttc-club-board\//.test(d.url || "") ? d.url : "./" }
+    data: { url: (() => { try { const u = new URL(d.url); return u.origin === "https://shahar1987.github.io" && u.pathname.startsWith("/ttc-club-board/") ? u.href : "./"; } catch (e) { return "./"; } })() }
   }));
 });
 self.addEventListener("notificationclick", e => {
