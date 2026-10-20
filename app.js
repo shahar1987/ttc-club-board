@@ -408,14 +408,14 @@ function personRow(i,p,heats){const opt=(arr,v)=>arr.map(x=>`<option${x===v?" se
   <div class="two"><label>שם פרטי<input type="text" class="f-first" maxlength="40" value="${esc(p.firstName||"")}"></label><label>שם משפחה<input type="text" class="f-last" maxlength="40" value="${esc(p.lastName||"")}"></label></div>
   <div class="two"><label>מקצה<select class="f-heat">${opt(heats,p.heat||heats[0])}</select></label><label>מגדר<select class="f-gender"><option value="ז"${p.gender==="ז"?" selected":""}>זכר</option><option value="נ"${p.gender==="נ"?" selected":""}>נקבה</option></select></label></div>
   <div class="two"><label>תאריך לידה<input type="text" class="f-birth" inputmode="numeric" placeholder="31.12.1985" maxlength="10" value="${esc(p.birth||"")}"></label><label>מידת חולצה<select class="f-shirt">${opt(SHIRTS,p.shirt||"M")}</select></label></div></fieldset>`}
-async function eventSheet(post,force){
+async function eventSheet(post,force,fromPop){
   const ev=post.popup,hs=(Array.isArray(ev.heats)?ev.heats:[]).filter(x=>typeof x==="string"&&x&&x.length<=20).slice(0,6),heats=hs.length?hs:["4 ק״מ"];
   let mine=[];try{mine=await TTCAuth.mySignups(ev.event)}catch(e){}
   const img=/^img\/[\w.-]+$/.test(post.img||"")?post.img:"";
   if(mine.length){if(!force)return;openSheet(`${img?`<img class="post-img" src="${img}" alt="">`:""}<h2 class="post-h">${esc(post.title)}</h2><div class="post-t">אתם רשומים ✅\n${mine.map(m=>`${esc(m.firstName)} ${esc(m.lastName)} · ${esc(m.heat)}`).join("\n")}</div><button class="linkbtn" id="evCancel" type="button">ביטול ההרשמה</button>`);
     $("#evCancel").onclick=async()=>{if(!confirm("לבטל את ההרשמה של כל המשתתפים?"))return;try{await TTCAuth.cancelSignups(ev.event);closeSheet();toast("ההרשמה בוטלה")}catch(e){toast("הביטול לא הצליח")}};return}
   const nm=(ME.member.name||"").trim().split(/\s+/),me={firstName:nm[0]||"",lastName:nm.slice(1).join(" ")};
-  openSheet(`${img?`<img class="post-img" src="${img}" alt="">`:""}<h2 class="post-h">${esc(post.title)}</h2>${post.text?`<div class="post-t">${esc(post.text)}</div>`:""}
+  openSheet(`${img&&!fromPop?`<img class="post-img" src="${img}" alt="">`:""}<h2 class="post-h">${fromPop?"הרשמה · ":""}${esc(post.title)}</h2>${post.text&&!fromPop?`<div class="post-t">${esc(post.text)}</div>`:""}
   <form class="form" id="evForm" novalidate>
     <div id="ppRows">${personRow(0,me,heats)}</div>
     <button type="button" class="btn ghost" id="ppAdd">+ הוספת בן/בת משפחה</button>
@@ -439,8 +439,18 @@ async function eventSheet(post,force){
     try{await TTCAuth.signUp(ev.event,people,ME.member.name);closeSheet();toast("נרשמתם! 🎉");track("click","event:"+ev.event)}
     catch(x){$("#evSave").disabled=false;err.textContent="ההרשמה לא נשמרה. בדקו את החיבור ונסו שוב."}};
 }
-function maybePopup(){const p=activeEvent();if(!p||!ME.member||!window.TTCAuth)return;
+let popReturn=null;
+function showPop(post){const img=/^img\/[\w.-]+$/.test(post.img||"")?post.img:"";
+  $("#popImg").hidden=!img;if(img)$("#popImg").src=img;$("#popT").textContent=post.title||"";$("#popTx").textContent=post.text||"";
+  popReturn=document.activeElement;const el=$("#pop");el.hidden=false;el.classList.add("on");requestAnimationFrame(()=>$("#popCard").focus({preventScroll:true}));track("post","popup:"+post.popup.event)}
+function hidePop(){const el=$("#pop");el.hidden=true;el.classList.remove("on");popReturn&&popReturn.focus&&popReturn.focus({preventScroll:true})}
+async function maybePopup(){const p=activeEvent();if(!p||!ME.member||!window.TTCAuth||!$("#pop").hidden)return;
   const later=+store.get("ttc_pop_"+p.popup.event)||0;if(Date.now()-later<2*86400e3)return; // "not now" waits two days
-  if(sheet.hidden)eventSheet(p,false)}
+  try{if((await TTCAuth.mySignups(p.popup.event)).length)return}catch(e){}
+  if(sheet.hidden)showPop(p)}
+$("#popGo").onclick=()=>{const p=activeEvent();hidePop();if(p)eventSheet(p,true,true)};
+$("#popLater").onclick=$("#popX").onclick=()=>{const p=activeEvent();if(p)store.set("ttc_pop_"+p.popup.event,String(Date.now()));hidePop()};
+$("#pop").addEventListener("click",e=>{if(e.target.id==="pop")$("#popLater").click()});
+addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#pop").hidden)$("#popLater").click()});
 function openEvent(){const p=activeEvent();if(!p)return;
   if(!ME.user)return toast("כדי להירשם, נכנסים קודם עם Google באזור האישי");if(!ME.member)return memberSheet();eventSheet(p,true)}
