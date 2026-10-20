@@ -231,7 +231,10 @@ function renderRank(){
   $("#podium").innerHTML=pod(r[1],2)+pod(r[0],1)+pod(r[2],3);
   const arrow=p=>p.ch==null?"":p.ch===0?'<small class="same">ללא שינוי</small>':p.ch>0?`<small class="up">▲ ${p.ch}</small>`:`<small class="down">▼ ${-p.ch}</small>`;
   $("#lb").innerHTML=r.slice(3).map((p,i)=>`<button class="lrow" data-pid="${p.id}"><span class="rk num">${i+4}</span><span class="nm"><b>${esc(dn(p))}</b><span>${esc(CAT[p.c]||p.c)}${p.rank?` · מקום ${p.rank} בארץ`:""}</span><div class="bar"><span style="width:${(p.pts/max*100).toFixed(1)}%"></span></div></span><span class="pt num">${p.pts.toFixed(0)}${arrow(p)}</span></button>`).join("");
-  const un=D.players.filter(p=>!p.pts).length;$("#unrated").textContent=un?`עוד ${un} שחקנים יקבלו דירוג אחרי המשחקים הרשמיים הראשונים שלהם.`:"";
+  // everyone registered with the club shows up, also new players who have no rating yet
+  const un=D.players.filter(p=>!p.pts).sort((a,b)=>dn(a).localeCompare(dn(b),"he"));
+  if(un.length)$("#lb").insertAdjacentHTML("beforeend",`<div class="lsub">חדשים במועדון · עוד בלי דירוג</div>`+un.map(p=>`<button class="lrow" data-pid="${p.id}"><span class="rk">🌱</span><span class="nm"><b>${esc(dn(p))}</b><span>${esc(CAT[p.c]||p.c)}</span></span><span class="pt"><small class="same">ממתין לדירוג</small></span></button>`).join(""));
+  $("#unrated").textContent=un.length?"שחקנים חדשים מקבלים דירוג אחרי המשחקים הרשמיים הראשונים שלהם.":"";
 }
 let podiumGrown=false;
 function growPodium(){if(podiumGrown)return;podiumGrown=true;$("#lb").classList.add("grown");if(RM.matches)return;
