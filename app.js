@@ -322,10 +322,12 @@ const introDone=new Promise(r=>setTimeout(r,seen||RM.matches?150:1900));
 function hideSplash(){introDone.then(()=>{$("#splash").classList.add("gone");$("#s-home").classList.add("enter-home")})}
 /* ---------- boot ---------- */
 // updates published by staff with the "boardPosts" permission (attendance app) — public read, no sign-in needed
+// a slow mobile line must never leave people on the opening screen: every startup request gives up in time
+const tfetch=(u,o={},ms=6000)=>{const c=new AbortController();setTimeout(()=>c.abort(),ms);return fetch(u,{...o,signal:c.signal})};
 async function staffPosts(){try{
   // only visible posts: the rules refuse anything else to the public
-  const r=await fetch("https://firestore.googleapis.com/v1/projects/ttcmh-2a752/databases/(default)/documents:runQuery?key=AIzaSyCmEVnBSkODaCZyrdEdO0vNQtvOnvgsQiA",{method:"POST",cache:"no-store",headers:{"content-type":"application/json"},
-    body:JSON.stringify({structuredQuery:{from:[{collectionId:"boardPosts"}],where:{fieldFilter:{field:{fieldPath:"hidden"},op:"EQUAL",value:{booleanValue:false}}},limit:100}})});
+  const r=await tfetch("https://firestore.googleapis.com/v1/projects/ttcmh-2a752/databases/(default)/documents:runQuery?key=AIzaSyCmEVnBSkODaCZyrdEdO0vNQtvOnvgsQiA",{method:"POST",cache:"no-store",headers:{"content-type":"application/json"},
+    body:JSON.stringify({structuredQuery:{from:[{collectionId:"boardPosts"}],where:{fieldFilter:{field:{fieldPath:"hidden"},op:"EQUAL",value:{booleanValue:false}}},limit:100}})},4000);
   if(!r.ok)return[];const j=await r.json();
   const v=f=>f?(f.stringValue??f.booleanValue??""):"";
   return (Array.isArray(j)?j:[]).map(x=>x.document).filter(Boolean).map(d=>{const f=d.fields||{};return{id:"s:"+d.name.split("/").pop(),title:String(v(f.title)).slice(0,90),text:String(v(f.text)).slice(0,1200),banner:v(f.banner)===true,pin:v(f.pin)===true,hidden:v(f.hidden)===true,link:String(v(f.link)),linkText:String(v(f.linkText)).slice(0,30),date:String(v(f.date))}}).filter(x=>x.title);
@@ -338,8 +340,8 @@ function boot(){
   if(ORDER.includes(start)&&start!=="home")setTimeout(()=>go(start,{silent:true,quiet:true}),150);
 }
 Promise.all([
-  fetch("data.json",{cache:"no-store"}).then(r=>r.json()),
-  fetch("posts.json",{cache:"no-store"}).then(r=>r.ok?r.json():{}).catch(()=>({})),
+  tfetch("data.json",{cache:"no-store"},12000).then(r=>r.json()),
+  tfetch("posts.json",{cache:"no-store"},5000).then(r=>r.ok?r.json():{}).catch(()=>({})),
   staffPosts()
 ]).then(([d,p,sp])=>{D=cleanData(d);POSTS=(Array.isArray(p.posts)?p.posts:[]).concat(sp);boot()})
  .catch(()=>{hideSplash();moveBall("home",true);$("#hero").innerHTML='<div class="hero"><div class="kick">אין חיבור כרגע. נסו לרענן בעוד רגע.</div></div>'});
