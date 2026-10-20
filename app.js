@@ -77,7 +77,7 @@ function moveBall(name,instant){
 addEventListener("resize",()=>moveBall(current,true));
 
 /* ---------- screens: direction-aware slide, per-screen scroll is kept ---------- */
-const ORDER=["home","leagues","rank","club"];let current="home",swapAnims=[];
+const ORDER=["home","leagues","rank","club","comp"];let current="home",swapAnims=[];
 function go(name,opts={}){
   if(!ORDER.includes(name))return;
   if(name===current){const s=$("#s-"+name);s.scrollTo({top:0,behavior:RM.matches?"auto":"smooth"});return}
@@ -258,9 +258,9 @@ function renderClub(){
   $("#venueSeg").innerHTML=D.training.map((v,i)=>`<button role="tab" data-i="${i}" aria-selected="${i===0}">${esc(v.v)}</button>`).join("");
   const slots=i=>{const v=D.training[i];$("#slots").innerHTML=!v?"":v.g.map(([g,d,t,c])=>`<div class="slot"><b>${esc(g)}</b><span class="t num">${esc(t)}</span><span>ימים ${esc(d)}</span><span>מאמן: ${esc(c)}</span></div>`).join("")};
   slots(0);segment($("#venueSeg"),b=>{slots(+b.dataset.i);slideIn($("#slots"),1)});
-  const now=new Date(),ev=D.events.filter(e=>when(e[0],"23:59")>=now).sort((a,b)=>when(a[0])-when(b[0])).slice(0,5);
-  $("#evs").innerHTML=ev.map(([d,n,u])=>{const x=when(d);return `<a class="ev" href="${esc(u)}" target="_blank" rel="noopener"><span class="d num">${x.getDate()}<small>${x.toLocaleDateString("he-IL",{month:"short"})}</small></span><span>${esc(n)}</span></a>`}).join("");
-  $("#evSec").hidden=!ev.length;
+  const now=new Date(),ev=D.events.filter(e=>when(e[0],"23:59")>=now).sort((a,b)=>when(a[0])-when(b[0]));
+  $("#evs").innerHTML=ev.map(([d,n,u])=>{const x=when(d);return `<a class="ev" href="${esc(u)}" target="_blank" rel="noopener"><span class="d num">${x.getDate()}<small>${x.toLocaleDateString("he-IL",{month:"short"})}</small></span><span>${esc(n)}</span><span class="go">להרשמה ←</span></a>`}).join("");
+  $("#evNone").hidden=!!ev.length;
   const U=new Date(D.updated);$("#upd").textContent=isNaN(U)?"":"עודכן "+U.toLocaleString("he-IL",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
 }
 $("#copyPhone").addEventListener("click",async()=>{try{await navigator.clipboard.writeText("0504999149");toast("המספר הועתק")}catch(e){toast("050-4999149")}});
