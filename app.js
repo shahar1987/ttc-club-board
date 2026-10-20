@@ -398,11 +398,11 @@ function memberSheet(){
     if(!PHONE_OK(phone))return $("#mErr").textContent="מספר הנייד לא נראה תקין. לדוגמה 050-1234567.";
     if(!$("#mOk").checked)return $("#mErr").textContent="כדי לשמור צריך לאשר שאת/ה מעל גיל 18 ומסכים/ה לשמירת הפרטים.";
     $("#mSave").disabled=true;$("#mErr").textContent="";
-    try{await TTCAuth.saveMember({name,phone,referrer:REF_LIVE&&isNew?store.get("ttc_ref"):null},isNew);ME.member={name,phone};renderMe();closeSheet();toast(isNew?"נרשמת. תודה!":"הפרטים עודכנו");if(isNew)setTimeout(maybePopup,900);track("click",isNew?"signup":"signup-edit")}
+    try{await TTCAuth.saveMember({name,phone,referrer:REF_LIVE&&isNew?store.get("ttc_ref"):null},isNew);ME.member={name,phone};rememberMe(ME.user,ME.member);renderMe();closeSheet();toast(isNew?"נרשמת. תודה!":"הפרטים עודכנו");if(isNew)setTimeout(maybePopup,900);track("click",isNew?"signup":"signup-edit")}
     catch(err){$("#mSave").disabled=false;$("#mErr").textContent="לא הצלחנו לשמור. בדקו את החיבור ונסו שוב."}};
-  $("#mOut").onclick=async()=>{await TTCAuth.signOut();closeSheet();toast("התנתקת")};
+  $("#mOut").onclick=async()=>{await TTCAuth.signOut();rememberMe(null);closeSheet();toast("התנתקת")};
   if(m)$("#mDel").onclick=async()=>{if(!confirm("למחוק את הפרטים שלך מהמועדון? אפשר להירשם שוב בכל זמן."))return;
-    try{await TTCAuth.deleteMember();ME.member=null;closeSheet();renderMe();toast("הפרטים נמחקו")}catch(e){$("#mErr").textContent="המחיקה לא הצליחה. נסו שוב."}};
+    try{await TTCAuth.deleteMember();ME.member=null;rememberMe(null);closeSheet();renderMe();toast("הפרטים נמחקו")}catch(e){$("#mErr").textContent="המחיקה לא הצליחה. נסו שוב."}};
 }
 document.addEventListener("click",async e=>{
   if(e.target.closest("#gateIn")&&$("#gateIn").dataset.step==="more")return memberSheet();
@@ -416,10 +416,19 @@ document.addEventListener("click",async e=>{
   }
   if(e.target.closest("#meEdit"))memberSheet();
 });
+// the member card is also kept on this device, so a returning member is let in even when offline or on a weak line
+function rememberMe(u,m){store.set("ttc_me",u&&m?JSON.stringify({uid:u.uid,name:m.name,phone:m.phone}):null)}
+async function loadMember(u){
+  for(let i=0;i<2;i++){try{const m=await Promise.race([TTCAuth.getMember(),new Promise((_,no)=>setTimeout(()=>no(new Error("slow")),8000))]);rememberMe(u,m);return{member:m}}catch(e){}}
+  let c=null;try{c=JSON.parse(store.get("ttc_me")||"null")}catch(e){}
+  if(c&&c.uid===u.uid)return{member:{name:c.name,phone:c.phone},unsure:true};
+  return{member:store.get("ttc_m")?{name:u.name||"",phone:""}:null,unsure:true}}
 function startAuth(){
-  addEventListener("ttc-auth-ready",()=>TTCAuth.onUser(async u=>{ME.user=u;ME.member=null;ME.ready=true;
-    if(u){try{ME.member=await TTCAuth.getMember()}catch(e){}}
-    renderMe();if(u&&!ME.member&&sheet.hidden)memberSheet();else setTimeout(maybePopup,600)}),{once:true});
+  addEventListener("ttc-auth-ready",()=>TTCAuth.onUser(async u=>{ME.user=u;ME.member=null;
+    // sign in once: a weak line or a slow answer must never look like "not registered"
+    if(u){const r=await loadMember(u);ME.member=r.member;if(r.unsure)setTimeout(()=>loadMember(u).then(x=>{if(!x.unsure&&ME.user===u){ME.member=x.member;renderMe()}}),15000)}
+    else rememberMe(null);
+    ME.ready=true;renderMe();if(u&&!ME.member&&sheet.hidden)memberSheet();else setTimeout(maybePopup,600)}),{once:true});
   const sc=document.createElement("script");sc.src="auth.js?v="+(BUILD||"1");sc.defer=true;document.head.appendChild(sc);
 }
 const SIGNIN_ON=true;

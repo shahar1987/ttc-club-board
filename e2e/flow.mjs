@@ -82,6 +82,11 @@ async function run(viewport, label) {
 
   step = "reload"; await page.reload(); await page.waitForTimeout(3500);
   assert.equal(await page.isVisible("#gate"), false, "member is not gated again after reload"); ok(`${label}: אחרי רענון נכנס ישר בלי מסך כניסה`);
+  step = "weak-line"; await page.route("http://127.0.0.1:8080/**", (r) => r.abort());
+  await page.reload(); await page.waitForTimeout(6000);
+  assert.equal(await page.isVisible("#gate"), false, "no sign-in screen when the database is unreachable");
+  assert.equal(await page.isVisible("#mForm"), false, "not asked for details again when the database is unreachable");
+  await page.unroute("http://127.0.0.1:8080/**"); ok(`${label}: גם בלי חיבור למסד — לא מבקש להתחבר או למלא פרטים שוב`);
   await ctx.close();
 }
 
