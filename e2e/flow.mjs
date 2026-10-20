@@ -90,7 +90,19 @@ async function run(viewport, label) {
   await ctx.close();
 }
 
+async function kid() {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } }); const page = await ctx.newPage();
+  page.on("pageerror", (e) => errors.push(`kid: ${e.message}`));
+  step = "kid"; await page.goto(APP); await page.waitForSelector("#gate:not([hidden])", { timeout: 10000 });
+  await page.click("#gateKid"); assert.equal(await page.isVisible("#gate"), false);
+  await page.reload(); await page.waitForTimeout(4500);
+  assert.equal(await page.isVisible("#gate"), false, "kid stays in view-only after reload");
+  assert.equal(await page.isVisible("#pop"), false, "no event popup for a kid"); ok("מתחת ל-18: נכנס לצפייה בלי התחברות, ונשאר כך גם אחרי רענון");
+  await ctx.close();
+}
+
 try {
+  await kid();
   await run({ width: 390, height: 844 }, "android");
   await run({ width: 375, height: 667 }, "small");
   assert.deepEqual(errors, [], "no page errors");

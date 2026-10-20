@@ -373,7 +373,9 @@ const OWNER_HASH="01729b4d5d3e455f8bacc0637897aa134b9fb122fc148113f0d0180dfab464
 async function isOwner(email){try{const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode((email||"").trim().toLowerCase()));return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("")===OWNER_HASH}catch(e){return false}}
 // sign-in is the way in: the gate covers the app until the visitor is signed in with Google and has saved name + phone
 function gate(force){const g=$("#gate"),b=$("#gateIn");if(!g||!(ME.ready||force))return;
-  const open=!(ME.user&&ME.member);store.set("ttc_m",open?null:"1");
+  // under 18: view-only, nothing is collected (sign-in and personal details are for parents and adult players)
+  const kid=!ME.user&&store.get("ttc_kid");$("#gateKid").hidden=!!ME.user;
+  const open=!(ME.user&&ME.member)&&!kid;store.set("ttc_m",ME.user&&ME.member?"1":null);
   if(!open){g.hidden=true;return}
   b.innerHTML=ME.user?"להשלמת הפרטים":GICON+"כניסה עם Google";b.dataset.step=ME.user?"more":"in";
   $("#gateTx").textContent=ME.user?"נשאר רק שם וטלפון, כדי שנזהה אתכם במועדון.":"משחקים, ליגות, דירוג ועדכונים מהמועדון. נכנסים פעם אחת עם חשבון Google, וזהו.";
@@ -406,6 +408,7 @@ function memberSheet(){
 }
 document.addEventListener("click",async e=>{
   if(e.target.closest("#gateIn")&&$("#gateIn").dataset.step==="more")return memberSheet();
+  if(e.target.closest("#gateKid")){store.set("ttc_kid","1");$("#gate").hidden=true;track("click","kid-view");return}
   if(e.target.closest("#gIn,#gateIn")){
     if(inApp)return openSheet(`<h2 class="post-h">קודם פותחים בדפדפן</h2><div class="post-t">גוגל לא מאפשרת להתחבר מתוך פייסבוק או אינסטגרם.
 1. לוחצים על שלוש הנקודות למעלה.
@@ -432,7 +435,7 @@ function startAuth(){
   const sc=document.createElement("script");sc.src="auth.js?v="+(BUILD||"1");sc.defer=true;document.head.appendChild(sc);
 }
 const SIGNIN_ON=true;
-if(SIGNIN_ON&&!store.get("ttc_m"))introDone.then(()=>{if(!(ME.user&&ME.member))gate(true)});
+if(SIGNIN_ON&&!store.get("ttc_m")&&!store.get("ttc_kid"))introDone.then(()=>{if(!(ME.user&&ME.member))gate(true)});
 if(SIGNIN_ON){introDone.then(()=>setTimeout(startAuth,300));addEventListener("load",()=>{try{renderMe()}catch(e){}})} // card shows at once; fills in when sign-in state is known
 
 /* ---------- event popup: after a member finished joining, an active event post pops up once with one-tap registration ---------- */
