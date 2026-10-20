@@ -178,7 +178,7 @@ function renderPosts(){
   $("#newsRail").innerHTML=list.map(x=>`<button class="pcard" data-post="${POSTS.indexOf(x)}">${img(x.img)?`<img src="${img(x.img)}" alt="" loading="lazy">`:""}<div class="in"><span class="dt">${/^\d{4}-\d{2}-\d{2}$/.test(x.date||"")?new Date(x.date+"T12:00").toLocaleDateString("he-IL",{day:"numeric",month:"long"}):""}${x.pin?" · נעוץ":""}</span><h3>${esc(x.title)}</h3>${x.text?`<p>${esc(x.text)}</p>`:""}</div></button>`).join("");
   $("#newsSec").hidden=!list.length;
 }
-document.addEventListener("click",e=>{const b=e.target.closest("[data-post]");if(!b)return;const x=POSTS[+b.dataset.post];if(!x)return;
+document.addEventListener("click",e=>{const b=e.target.closest("[data-post]");if(!b)return;const x=POSTS[+b.dataset.post];if(!x)return;if(x.popup&&x===activeEvent())return openEvent();
   const img=/^img\/[\w.-]+$/.test(x.img||"")?x.img:"",link=/^https:\/\//.test(x.link||"")?x.link:"";
   openSheet(`${img?`<img class="post-img" src="${img}" alt="">`:""}<h2 class="post-h">${esc(x.title)}</h2>${x.text?`<div class="post-t">${esc(x.text)}</div>`:""}${link?`<a class="btn" style="margin-top:14px" href="${esc(link)}" target="_blank" rel="noopener">${esc(x.linkText||"לפרטים")}</a>`:""}`);track("post",x.title)});
 
@@ -372,7 +372,7 @@ function memberSheet(){
     if(!PHONE_OK(phone))return $("#mErr").textContent="מספר הנייד לא נראה תקין. לדוגמה 050-1234567.";
     if(!$("#mOk").checked)return $("#mErr").textContent="כדי לשמור צריך לאשר שאת/ה מעל גיל 18 ומסכים/ה לשמירת הפרטים.";
     $("#mSave").disabled=true;$("#mErr").textContent="";
-    try{await TTCAuth.saveMember({name,phone},isNew);ME.member={name,phone};renderMe();closeSheet();toast(isNew?"נרשמת. תודה!":"הפרטים עודכנו");track("click",isNew?"signup":"signup-edit")}
+    try{await TTCAuth.saveMember({name,phone},isNew);ME.member={name,phone};renderMe();closeSheet();toast(isNew?"נרשמת. תודה!":"הפרטים עודכנו");if(isNew)setTimeout(maybePopup,900);track("click",isNew?"signup":"signup-edit")}
     catch(err){$("#mSave").disabled=false;$("#mErr").textContent="לא הצלחנו לשמור. בדקו את החיבור ונסו שוב."}};
   $("#mOut").onclick=async()=>{await TTCAuth.signOut();closeSheet();toast("התנתקת")};
   if(m)$("#mDel").onclick=async()=>{if(!confirm("למחוק את הפרטים שלך מהמועדון? אפשר להירשם שוב בכל זמן."))return;
@@ -392,8 +392,55 @@ document.addEventListener("click",async e=>{
 function startAuth(){
   addEventListener("ttc-auth-ready",()=>TTCAuth.onUser(async u=>{ME.user=u;ME.member=null;
     if(u){try{ME.member=await TTCAuth.getMember()}catch(e){}}
-    renderMe();if(u&&!ME.member&&sheet.hidden)memberSheet()}),{once:true});
+    renderMe();if(u&&!ME.member&&sheet.hidden)memberSheet();else setTimeout(maybePopup,600)}),{once:true});
   const sc=document.createElement("script");sc.src="auth.js?v="+(BUILD||"1");sc.defer=true;document.head.appendChild(sc);
 }
 const SIGNIN_ON=true;
 if(SIGNIN_ON)introDone.then(()=>setTimeout(startAuth,300));
+
+/* ---------- event popup: after a member finished joining, an active event post pops up once with one-tap registration ---------- */
+const SHIRTS=["XS","S","M","L","XL","XXL","ילדים 6","ילדים 8","ילדים 10","ילדים 12","ילדים 14"];
+const BIRTH_OK=v=>/^\d{1,2}[./]\d{1,2}[./]\d{4}$/.test(v);
+function activeEvent(){const today=new Date().toISOString().slice(0,10);
+  return (POSTS||[]).find(p=>p&&!p.hidden&&p.popup&&/^[a-z0-9-]{3,40}$/.test(p.popup.event||"")&&(!p.popup.until||p.popup.until>=today))}
+function personRow(i,p,heats){const opt=(arr,v)=>arr.map(x=>`<option${x===v?" selected":""}>${esc(x)}</option>`).join("");
+  return `<fieldset class="pp-row" data-i="${i}"><legend>${i===0?"אני":"משתתף/ת "+(i+1)}${i>0?' <button type="button" class="linkbtn pp-del" aria-label="הסרה">הסרה</button>':""}</legend>
+  <div class="two"><label>שם פרטי<input type="text" class="f-first" maxlength="40" value="${esc(p.firstName||"")}"></label><label>שם משפחה<input type="text" class="f-last" maxlength="40" value="${esc(p.lastName||"")}"></label></div>
+  <div class="two"><label>מקצה<select class="f-heat">${opt(heats,p.heat||heats[0])}</select></label><label>מגדר<select class="f-gender"><option value="ז"${p.gender==="ז"?" selected":""}>זכר</option><option value="נ"${p.gender==="נ"?" selected":""}>נקבה</option></select></label></div>
+  <div class="two"><label>תאריך לידה<input type="text" class="f-birth" inputmode="numeric" placeholder="31.12.1985" maxlength="10" value="${esc(p.birth||"")}"></label><label>מידת חולצה<select class="f-shirt">${opt(SHIRTS,p.shirt||"M")}</select></label></div></fieldset>`}
+async function eventSheet(post,force){
+  const ev=post.popup,heats=(ev.heats&&ev.heats.length?ev.heats:["4 ק״מ"]).slice(0,6);
+  let mine=[];try{mine=await TTCAuth.mySignups(ev.event)}catch(e){}
+  const img=/^img\/[\w.-]+$/.test(post.img||"")?post.img:"";
+  if(mine.length){if(!force)return;openSheet(`${img?`<img class="post-img" src="${img}" alt="">`:""}<h2 class="post-h">${esc(post.title)}</h2><div class="post-t">אתם רשומים ✅\n${mine.map(m=>`${esc(m.firstName)} ${esc(m.lastName)} · ${esc(m.heat)}`).join("\n")}</div><button class="linkbtn" id="evCancel" type="button">ביטול ההרשמה</button>`);
+    $("#evCancel").onclick=async()=>{if(!confirm("לבטל את ההרשמה של כל המשתתפים?"))return;try{await TTCAuth.cancelSignups(ev.event);closeSheet();toast("ההרשמה בוטלה")}catch(e){toast("הביטול לא הצליח")}};return}
+  const nm=(ME.member.name||"").trim().split(/\s+/),me={firstName:nm[0]||"",lastName:nm.slice(1).join(" ")};
+  openSheet(`${img?`<img class="post-img" src="${img}" alt="">`:""}<h2 class="post-h">${esc(post.title)}</h2>${post.text?`<div class="post-t">${esc(post.text)}</div>`:""}
+  <form class="form" id="evForm" novalidate>
+    <div id="ppRows">${personRow(0,me,heats)}</div>
+    <button type="button" class="btn ghost" id="ppAdd">+ הוספת בן/בת משפחה</button>
+    <label>עיר / יישוב<input type="text" id="evCity" maxlength="40" autocomplete="address-level2"></label>
+    <div class="why">הפרטים נשלחים למנהל המועדון לצורך ההרשמה לאירוע. אין צורך בתעודת זהות כאן — אם המארגנים יבקשו, ניצור קשר. הטלפון והמייל נלקחים מהאזור האישי.</div>
+    <div class="err" id="evErr" role="alert"></div>
+    <button class="btn" type="submit" id="evSave">להרשמה</button>
+    <button class="linkbtn" type="button" id="evLater" style="color:var(--muted)">לא עכשיו</button>
+  </form>`);
+  const rows=$("#ppRows");
+  $("#ppAdd").onclick=()=>{const n=rows.children.length;if(n>=8)return;rows.insertAdjacentHTML("beforeend",personRow(n,{lastName:me.lastName},heats))};
+  rows.addEventListener("click",e=>{const d=e.target.closest(".pp-del");if(d)d.closest(".pp-row").remove()});
+  $("#evLater").onclick=()=>{store.set("ttc_pop_"+ev.event,String(Date.now()));closeSheet()};
+  $("#evForm").onsubmit=async e=>{e.preventDefault();const err=$("#evErr");err.textContent="";
+    const city=$("#evCity").value.trim();
+    const people=[...rows.querySelectorAll(".pp-row")].map(r=>({firstName:r.querySelector(".f-first").value.trim(),lastName:r.querySelector(".f-last").value.trim(),heat:r.querySelector(".f-heat").value,gender:r.querySelector(".f-gender").value,birth:r.querySelector(".f-birth").value.trim().replace(/\//g,"."),shirt:r.querySelector(".f-shirt").value,city,phone:ME.member.phone}));
+    const bad=people.findIndex(p=>!p.firstName||!p.lastName||!BIRTH_OK(p.birth));
+    if(bad>=0)return err.textContent=`חסר שם או תאריך לידה (בפורמט 31.12.1985) אצל ${bad===0?"המשתתף הראשון":"משתתף "+(bad+1)}.`;
+    if(!city)return err.textContent="חסרה עיר / יישוב.";
+    $("#evSave").disabled=true;
+    try{await TTCAuth.signUp(ev.event,people,ME.member.name);closeSheet();toast("נרשמתם! 🎉");track("click","event:"+ev.event)}
+    catch(x){$("#evSave").disabled=false;err.textContent="ההרשמה לא נשמרה. בדקו את החיבור ונסו שוב."}};
+}
+function maybePopup(){const p=activeEvent();if(!p||!ME.member||!window.TTCAuth)return;
+  const later=+store.get("ttc_pop_"+p.popup.event)||0;if(Date.now()-later<2*86400e3)return; // "not now" waits two days
+  if(sheet.hidden)eventSheet(p,false)}
+function openEvent(){const p=activeEvent();if(!p)return;
+  if(!ME.user)return toast("כדי להירשם, נכנסים קודם עם Google באזור האישי");if(!ME.member)return memberSheet();eventSheet(p,true)}
