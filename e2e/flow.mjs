@@ -157,7 +157,7 @@ async function adminFlow() {
   assert.equal((await docs("pushRequests")).length, 1); ok("ניהול: התראה נכנסת לתור השליחה");
 
   step = "admin-members"; await page.click("[data-tab=members]");
-  await page.waitForSelector("#ml .card b", { timeout: 10000 });
+  await page.waitForSelector("#ml .card", { timeout: 10000 });
   await page.screenshot({ path: "shots/admin-3-members.png" }); ok("ניהול: רשימת הנרשמים נטענת");
   step = "admin-signups"; await page.click("[data-tab=signups]"); await page.waitForSelector("#sl .card", { timeout: 10000 }); ok("ניהול: מסך ההרשמות נטען");
   step = "admin-add-manager"; await page.click("[data-tab=managers]"); await page.waitForSelector("#mE");
@@ -178,17 +178,30 @@ async function adminFlow() {
 
 
   step = "portal-shows-post"; ctx = await browser.newContext({ viewport: { width: 390, height: 844 } }); page = await ctx.newPage();
-  await page.goto(APP); await page.waitForSelector("#gate:not([hidden])", { timeout: 10000 }); await page.click("#gateKid");
+  await page.goto(APP);
   await page.waitForSelector("#newsRail >> text=אימון פתוח בשבת", { timeout: 15000 });
   assert.ok(await page.$('#newsRail img[src^="data:image/jpeg"]'), "picture from the admin page shows in the portal");
   await page.screenshot({ path: "shots/admin-4-portal.png" }); ok("הפורטל מציג את העדכון החדש עם התמונה");
   await ctx.close();
 }
 
+// the portal is open: no sign-in for visitors (owner's decision 20.10.2026)
+async function visitor(viewport, label) {
+  const ctx = await browser.newContext({ viewport }); const page = await ctx.newPage();
+  page.on("pageerror", (e) => errors.push(`${label}: ${e.message}`));
+  step = "visitor-open"; await page.goto(APP); await page.waitForSelector("#sh", { timeout: 10000 }); await page.waitForTimeout(3000);
+  assert.equal(await page.$("#gate"), null, "no sign-in screen"); assert.equal(await page.isVisible("#adminLink"), false, "no admin tab for visitors");
+  step = "visitor-popup"; await page.waitForSelector("#pop:not([hidden])", { timeout: 10000 });
+  const [tab] = await Promise.all([ctx.waitForEvent("page", { timeout: 10000 }), page.click("#popGo")]);
+  assert.match(tab.url(), /docs\.google\.com/, "registration opens the organisers' file"); await tab.close();
+  step = "visitor-card"; await page.waitForSelector("#me #invite", { timeout: 10000 });
+  await page.screenshot({ path: `shots/${label}-home.png` }); ok(`${label}: נכנסים בלי התחברות, חלון המרוץ מוביל להרשמה של המארגנים`);
+  await ctx.close();
+}
+
 try {
-  await kid();
-  await run({ width: 390, height: 844 }, "android");
-  await run({ width: 375, height: 667 }, "small");
+  await visitor({ width: 390, height: 844 }, "android");
+  await visitor({ width: 375, height: 667 }, "small");
   await adminFlow();
   assert.deepEqual(errors, [], "no page errors");
   console.log("\nכל הבדיקות עברו");

@@ -367,8 +367,9 @@ const GICON='<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
 let ME={user:null,member:null,ready:false};
 const PHONE_OK=v=>/^(\+?972|0)5\d{8}$/.test(v.replace(/[\s-]/g,""));
 function renderMe(){
-  gate();const el=$("#me");$("#meSec").hidden=false;const al=$("#adminLink");al&&al.remove();
-  if(!ME.user){el.innerHTML=`<div class="tx"><b>האזור האישי</b>התחברו עם Google כדי להמשיך.</div><button class="gbtn" id="gIn" type="button">${GICON}כניסה</button>`;if(pushAsk())el.insertAdjacentHTML("beforeend",'<button class="btn invite" id="pushOn" type="button">🔔 לקבל התראות מהמועדון</button>');return}
+  const el=$("#me");$("#meSec").hidden=false;const al=$("#adminLink");al&&al.remove();
+  // open portal: no sign-in for visitors (owner's decision 20.10.2026) — the card only offers notifications and inviting a friend
+  if(!ME.user){el.innerHTML=`<div class="tx"><b>המועדון בכיס</b>עדכונים, משחקים ותחרויות. אפשר לקבל התראות ולהזמין חברים לאימון ניסיון.</div><button class="btn invite" id="invite" type="button">🎁 להזמין חבר/ה לאימון ניסיון</button>`;if(pushAsk())el.insertAdjacentHTML("beforeend",'<button class="btn invite" id="pushOn" type="button">🔔 לקבל התראות מהמועדון</button>');return}
   if(!ME.member){el.innerHTML=`<div class="tx"><b>עוד צעד קטן</b>נשאר רק להוסיף טלפון.</div><button class="btn" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">השלמה</button>`;return}
   el.innerHTML=`<div class="tx"><b>${esc(ME.member.name)}</b>מחובר/ת · ${esc(ME.user.email)}</div><button class="btn ghost" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">הפרטים שלי</button>`;
   el.insertAdjacentHTML("beforeend",'<button class="btn invite" id="invite" type="button">🎁 להזמין חבר/ה לאימון ניסיון</button>');
@@ -378,15 +379,6 @@ function renderMe(){
 // the owner's address is kept only as a hash in this public code; the dashboard itself checks the Claude account
 const OWNER_HASH="01729b4d5d3e455f8bacc0637897aa134b9fb122fc148113f0d0180dfab464f4";
 async function isOwner(email){try{const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode((email||"").trim().toLowerCase()));return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("")===OWNER_HASH}catch(e){return false}}
-// sign-in is the way in: the gate covers the app until the visitor is signed in with Google and has saved name + phone
-function gate(force){const g=$("#gate"),b=$("#gateIn");if(!g||!(ME.ready||force))return;
-  // under 18: view-only, nothing is collected (sign-in and personal details are for parents and adult players)
-  const kid=!ME.user&&store.get("ttc_kid");$("#gateKid").hidden=!!ME.user;
-  const open=!(ME.user&&ME.member)&&!kid;store.set("ttc_m",ME.user&&ME.member?"1":null);
-  if(!open){if(!g.hidden){g.hidden=true;const h=$("#s-home");h.classList.remove("enter-home");void h.offsetWidth;h.classList.add("enter-home")}return}
-  b.innerHTML=ME.user?"להשלמת הפרטים":GICON+"כניסה עם Google";b.dataset.step=ME.user?"more":"in";
-  $("#gateTx").textContent=ME.user?"נשאר רק שם וטלפון, כדי שנזהה אתכם במועדון.":"משחקים, ליגות, דירוג ועדכונים מהמועדון. נכנסים פעם אחת עם חשבון Google, וזהו.";
-  g.hidden=false}
 function memberSheet(){
   const m=ME.member,isNew=!m;
   openSheet(`<h2 class="post-h">${isNew?"כמעט בפנים":"הפרטים שלי"}</h2>
@@ -416,9 +408,7 @@ function memberSheet(){
     try{await TTCAuth.deleteMember();ME.member=null;rememberMe(null);closeSheet();renderMe();toast("הפרטים נמחקו")}catch(e){$("#mErr").textContent="המחיקה לא הצליחה. נסו שוב."}};
 }
 document.addEventListener("click",async e=>{
-  if(e.target.closest("#gateIn")&&$("#gateIn").dataset.step==="more")return memberSheet();
-  if(e.target.closest("#gateKid")){store.set("ttc_kid","1");$("#gate").hidden=true;track("click","kid-view");return}
-  if(e.target.closest("#gIn,#gateIn")){
+  if(e.target.closest("#gIn")){
     if(inApp)return openSheet(`<h2 class="post-h">קודם פותחים בדפדפן</h2><div class="post-t">גוגל לא מאפשרת להתחבר מתוך פייסבוק או אינסטגרם.
 1. לוחצים על שלוש הנקודות למעלה.
 2. בוחרים "פתיחה בדפדפן".
@@ -440,15 +430,14 @@ async function loadMember(u){
   if(c&&c.uid===u.uid)return{member:{name:c.name,phone:c.phone},unsure:true};
   return{member:store.get("ttc_m")?{name:u.name||"",phone:""}:null,unsure:true}}
 function startAuth(){
-  addEventListener("ttc-auth-ready",()=>TTCAuth.onUser(async u=>{ME.user=u;ME.member=null;
+  addEventListener("ttc-auth-ready",()=>TTCAuth.onUser(async u=>{u=null;ME.user=u;ME.member=null;
     // sign in once: a weak line or a slow answer must never look like "not registered"
     if(u){const r=await loadMember(u);ME.member=r.member;if(r.unsure)setTimeout(()=>loadMember(u).then(x=>{if(!x.unsure&&ME.user===u){ME.member=x.member;renderMe()}}),15000)}
     else rememberMe(null);
-    ME.ready=true;renderMe();if(u&&!ME.member&&sheet.hidden)memberSheet();else setTimeout(maybePopup,600)}),{once:true});
+    ME.ready=true;renderMe();setTimeout(maybePopup,600)}),{once:true});
   const sc=document.createElement("script");sc.src="auth.js?v="+(BUILD||"1");sc.defer=true;document.head.appendChild(sc);
 }
 const SIGNIN_ON=true;
-if(SIGNIN_ON&&!store.get("ttc_m")&&!store.get("ttc_kid"))introDone.then(()=>{if(!(ME.user&&ME.member))gate(true)});
 if(SIGNIN_ON){introDone.then(()=>setTimeout(startAuth,300));addEventListener("load",()=>{try{renderMe()}catch(e){}})} // card shows at once; fills in when sign-in state is known
 
 /* ---------- event popup: after a member finished joining, an active event post pops up once with one-tap registration ---------- */
@@ -509,16 +498,15 @@ function showPop(post,opts={}){const img=opts.img||(IMG_OK.test(post.img||"")?po
   $("#popImg").hidden=!img;if(img)$("#popImg").src=img;$("#popT").textContent=post.title||"";$("#popTx").textContent=post.text||"";
   popReturn=document.activeElement;const el=$("#pop");el.hidden=false;el.classList.add("on");requestAnimationFrame(()=>$("#popCard").focus({preventScroll:true}));track("post","popup:"+(post.popup?post.popup.event:"invite"))}
 function hidePop(){const el=$("#pop");el.hidden=true;el.classList.remove("on");popReturn&&popReturn.focus&&popReturn.focus({preventScroll:true})}
-async function maybePopup(){const p=activeEvent();if(!p||!ME.member||!ME.member.phone||!window.TTCAuth||!$("#pop").hidden)return;
+async function maybePopup(){const p=activeEvent();if(!p||!$("#pop").hidden)return;
   const later=+store.get("ttc_pop_"+p.popup.event)||0;if(Date.now()-later<2*86400e3)return; // "not now" waits two days
-  try{if((await TTCAuth.mySignups(p.popup.event)).length)return}catch(e){}
   if(sheet.hidden)showPop(p)}
-$("#popGo").onclick=()=>{hidePop();if(popAction)return popAction();const p=activeEvent();if(p)eventSheet(p,true,true)};
+$("#popGo").onclick=()=>{hidePop();if(popAction)return popAction();openEvent()};
 $("#popLater").onclick=$("#popX").onclick=()=>{if(popLaterFn){popLaterFn();return hidePop()}const p=activeEvent();if(p)store.set("ttc_pop_"+p.popup.event,String(Date.now()));hidePop()};
 $("#pop").addEventListener("click",e=>{if(e.target.id==="pop")$("#popLater").click()});
 addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#pop").hidden)$("#popLater").click()});
 function openEvent(){const p=activeEvent();if(!p)return;
-  if(!ME.user)return toast("כדי להירשם, נכנסים קודם עם Google באזור האישי");if(!ME.member||!ME.member.phone)return memberSheet();eventSheet(p,true)}
+  if(/^https:\/\//.test(p.link||""))return open(p.link,"_blank","noopener");toast("לפרטים והרשמה: 050-4999149")}
 
 /* ---------- scroll craft: each screen's scroll drives one picture (hero layers + served ball, club wipe, competitions zoom) ---------- */
 (()=>{const clamp=v=>v>0?Math.min(1,v):0,sh=$("#sh"),ball=sh&&sh.querySelector(".sh-ball");
@@ -547,7 +535,7 @@ async function pushOnClick(){
 
 /* ---------- bring a friend: members share a personal link; the friend lands on a welcome popup with one tap to book a free trial ---------- */
 const BOARD_URL="https://shahar1987.github.io/ttc-club-board/";
-const REF_LIVE=true;
+const REF_LIVE=false; // no sign-in on the portal, so no personal invite links or trophy table
 async function loadTrophy(){if(!REF_LIVE||!window.TTCAuth)return;let r=null;try{r=await TTCAuth.referrals()}catch(e){}
   const top=r&&Array.isArray(r.top)?r.top.filter(x=>x&&typeof x.name==="string"&&Number.isFinite(+x.count)).slice(0,10):[];
   if(!top.length)return;const medal=["🥇","🥈","🥉"];
