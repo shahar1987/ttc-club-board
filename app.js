@@ -316,6 +316,13 @@ if(seen)$("#splash").classList.add("quick");
 const introDone=new Promise(r=>setTimeout(r,seen||RM.matches?150:1900));
 function hideSplash(){introDone.then(()=>{$("#splash").classList.add("gone");$("#s-home").classList.add("enter-home")})}
 /* ---------- boot ---------- */
+// updates published by staff with the "boardPosts" permission (attendance app) — public read, no sign-in needed
+async function staffPosts(){try{
+  const r=await fetch("https://firestore.googleapis.com/v1/projects/ttcmh-2a752/databases/(default)/documents/boardPosts?pageSize=50&key=AIzaSyCmEVnBSkODaCZyrdEdO0vNQtvOnvgsQiA",{cache:"no-store"});
+  if(!r.ok)return[];const j=await r.json();
+  const v=f=>f?(f.stringValue??f.booleanValue??""):"";
+  return (j.documents||[]).map(d=>{const f=d.fields||{};return{id:"s:"+d.name.split("/").pop(),title:String(v(f.title)).slice(0,90),text:String(v(f.text)).slice(0,1200),banner:v(f.banner)===true,pin:v(f.pin)===true,hidden:v(f.hidden)===true,link:String(v(f.link)),linkText:String(v(f.linkText)).slice(0,30),date:String(v(f.date))}}).filter(x=>x.title);
+}catch(e){return[]}}
 function boot(){
   for(const f of [renderHome,renderPosts,renderLeagueTabs,()=>renderLeague(0),renderRank,renderClub])try{f()}catch(e){console.error(e)}
   const start=(location.hash||"").slice(1);
@@ -325,8 +332,9 @@ function boot(){
 }
 Promise.all([
   fetch("data.json",{cache:"no-store"}).then(r=>r.json()),
-  fetch("posts.json",{cache:"no-store"}).then(r=>r.ok?r.json():{}).catch(()=>({}))
-]).then(([d,p])=>{D=cleanData(d);POSTS=Array.isArray(p.posts)?p.posts:[];boot()})
+  fetch("posts.json",{cache:"no-store"}).then(r=>r.ok?r.json():{}).catch(()=>({})),
+  staffPosts()
+]).then(([d,p,sp])=>{D=cleanData(d);POSTS=(Array.isArray(p.posts)?p.posts:[]).concat(sp);boot()})
  .catch(()=>{hideSplash();moveBall("home",true);$("#hero").innerHTML='<div class="hero"><div class="kick">אין חיבור כרגע. נסו לרענן בעוד רגע.</div></div>'});
 
 /* ---------- analytics consent: asked once, only when stats are switched on; changeable from the footer ---------- */
