@@ -62,8 +62,9 @@ async function run(viewport, label) {
   await shot("4-form");
   await page.click("#evSave");
   step = "event-save";
-  await page.waitForSelector("#evForm", { state: "detached", timeout: 10000 }).catch(async () => { await shot("4-error"); throw new Error("form error: " + (await page.textContent("#evErr"))); });
-  const mine = (await docs("eventSignups")).filter((d) => field(d, "email") === email);
+  let mine = [];
+  for (let i = 0; i < 20 && mine.length < 2; i++) { await page.waitForTimeout(500); mine = (await docs("eventSignups")).filter((d) => field(d, "email") === email); }
+  if (mine.length < 2) { await shot("4-error"); throw new Error(`saved ${mine.length}/2; form says: "${await page.textContent("#evErr").catch(() => "")}"`); }
   assert.equal(mine.length, 2, "two signups saved");
   const kid = mine.find((d) => field(d, "firstName") === "נועה");
   assert.equal(field(kid, "lastName"), "כהן"); assert.equal(field(kid, "birth"), "1.2.2015"); assert.equal(field(kid, "heat"), "4 ק״מ (משפחות)");
