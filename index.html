@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl" data-theme="light">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://apis.google.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://script.google.com https://script.googleusercontent.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://www.googleapis.com; frame-src https://ttcmh-2a752.firebaseapp.com https://accounts.google.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>טניס שולחן מבואות החרמון</title>
@@ -245,6 +245,19 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
 .soc{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 6px;border-radius:18px;text-decoration:none;color:var(--ink);background:var(--paper);border:1px solid var(--line);font-weight:600;font-size:13px;transition:transform .12s var(--ease)}
 .soc:active{transform:scale(.95)}
 .soc.fb svg{color:#3b6fc4}.soc.ig svg{color:#b8577e}.soc.wa svg{color:#3d8a5f}
+.me{display:flex;gap:12px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:12px 14px}
+.me .tx{flex:1;min-width:0;font-size:13.5px;color:var(--muted)}
+.me .tx b{display:block;color:var(--ink);font-size:14.5px}
+.gbtn{min-height:44px;display:inline-flex;align-items:center;gap:8px;border-radius:14px;padding:8px 14px;background:#fff;border:1px solid #dadce0;color:#1f1f1f;font-weight:600;font-size:14px;flex:none}
+.gbtn svg{flex:none}
+.form{display:grid;gap:12px;margin-top:6px}
+.form label{display:grid;gap:4px;font-size:14px;font-weight:600}
+.form input[type=text],.form input[type=tel]{font:inherit;font-size:16px;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--sunk);color:var(--ink)}
+.form .chk{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:13.5px}
+.form .chk input{width:20px;height:20px;margin-top:2px;flex:none}
+.form .why{font-size:13px;color:var(--muted);background:var(--tint);border-radius:12px;padding:10px 12px}
+.form .err{color:var(--loss);font-size:13.5px;min-height:1em}
+.linkbtn{color:var(--loss);text-decoration:underline;font-size:13.5px;min-height:44px;background:none;border:0}
 .install{display:flex;gap:12px;align-items:center;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:12px 14px}
 .install img{width:44px;height:44px;border-radius:11px;border:1px solid var(--line)}
 .install div{flex:1;min-width:0;font-size:13.5px}
@@ -351,6 +364,7 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
   <div class="stagger">
     <div class="pad" id="noticeWrap"></div>
     <div class="pad" id="hero"></div>
+    <div class="pad" id="meSec" hidden style="margin-top:12px"><div class="me" id="me"></div></div>
     <div class="pad" id="installSec" hidden style="margin-top:12px">
       <div class="install"><img src="icon-192.png" alt=""><div><b>האפליקציה של המועדון</b><span id="installTxt">אייקון במסך הבית, נפתח כמו אפליקציה. בלי חנות, בחינם.</span></div><button class="btn" id="installBtn" style="min-height:44px;padding:8px 16px">התקנה</button></div>
     </div>
@@ -444,6 +458,6 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
 <div class="toast" id="toast" role="status"></div>
 </div>
 
-<script src="app.js?v=20261020140341" defer></script>
+<script src="app.js?v=20261020141047" defer></script>
 </body>
 </html>

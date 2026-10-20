@@ -337,3 +337,59 @@ if(STATS_URL){
   $("#consentYes").onclick=()=>setConsent("yes");$("#consentNo").onclick=()=>setConsent("no");
   $("#statsPref").onclick=()=>{setConsent(CONSENT==="yes"?"no":"yes");toast(CONSENT==="yes"?"הסטטיסטיקה הופעלה":"הסטטיסטיקה כובתה")};
 }
+
+/* ---------- personal area: optional Google sign-in (name + phone), stored only for the club manager ---------- */
+const GICON='<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
+let ME={user:null,member:null,ready:false};
+const PHONE_OK=v=>/^(\+?972|0)5\d{8}$/.test(v.replace(/[\s-]/g,""));
+function renderMe(){
+  const el=$("#me");$("#meSec").hidden=false;
+  if(!ME.user){el.innerHTML=`<div class="tx"><b>האזור האישי</b>התחברו כדי שנזהה אתכם במועדון ונעדכן אתכם. הצפייה באפליקציה פתוחה גם בלי.</div><button class="gbtn" id="gIn" type="button">${GICON}כניסה</button>`;return}
+  if(!ME.member){el.innerHTML=`<div class="tx"><b>עוד צעד קטן</b>נשאר רק להוסיף טלפון.</div><button class="btn" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">השלמה</button>`;return}
+  el.innerHTML=`<div class="tx"><b>${esc(ME.member.name)}</b>מחובר/ת · ${esc(ME.user.email)}</div><button class="btn ghost" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">הפרטים שלי</button>`;
+}
+function memberSheet(){
+  const m=ME.member,isNew=!m;
+  openSheet(`<h2 class="post-h">${isNew?"הצטרפות לאזור האישי":"הפרטים שלי"}</h2>
+  <form class="form" id="mForm" novalidate>
+    <label>שם מלא<input type="text" id="mName" maxlength="80" autocomplete="name" value="${esc(m?m.name:ME.user.name)}" required></label>
+    <label>טלפון נייד<input type="tel" id="mPhone" maxlength="20" inputmode="tel" autocomplete="tel" placeholder="050-0000000" value="${esc(m?m.phone:"")}" required></label>
+    <div class="why">למה צריך: כדי לזהות אתכם כשחקנים או כהורים במועדון וליצור קשר בענייני המועדון. רק מנהל המועדון רואה את הפרטים. אין חובה למסור אותם, ולא נשלח פרסומות. <a href="privacy.html">מדיניות הפרטיות</a></div>
+    <label class="chk"><input type="checkbox" id="mOk" ${m?"checked":""}><span>אני בן/בת 18 ומעלה (הורה או שחקן בוגר), קראתי את <a href="privacy.html">מדיניות הפרטיות</a> ואני מסכים/ה שהפרטים יישמרו לצורך זה</span></label>
+    <div class="err" id="mErr" role="alert"></div>
+    <button class="btn" type="submit" id="mSave">${isNew?"שמירה":"שמירת שינויים"}</button>
+    <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <button class="linkbtn" type="button" id="mOut" style="color:var(--muted)">התנתקות</button>
+      ${m?'<button class="linkbtn" type="button" id="mDel">מחיקת הפרטים שלי</button>':""}
+    </div>
+  </form>`);
+  $("#mForm").onsubmit=async e=>{e.preventDefault();const name=$("#mName").value.trim(),phone=$("#mPhone").value.replace(/[\s-]/g,"");
+    if(!name)return $("#mErr").textContent="חסר שם.";
+    if(!PHONE_OK(phone))return $("#mErr").textContent="מספר הנייד לא נראה תקין. לדוגמה 050-1234567.";
+    if(!$("#mOk").checked)return $("#mErr").textContent="כדי לשמור צריך לאשר שאת/ה מעל גיל 18 ומסכים/ה לשמירת הפרטים.";
+    $("#mSave").disabled=true;$("#mErr").textContent="";
+    try{await TTCAuth.saveMember({name,phone},isNew);ME.member={name,phone};renderMe();closeSheet();toast(isNew?"נרשמת. תודה!":"הפרטים עודכנו");track("click",isNew?"signup":"signup-edit")}
+    catch(err){$("#mSave").disabled=false;$("#mErr").textContent="לא הצלחנו לשמור. בדקו את החיבור ונסו שוב."}};
+  $("#mOut").onclick=async()=>{await TTCAuth.signOut();closeSheet();toast("התנתקת")};
+  if(m)$("#mDel").onclick=async()=>{if(!confirm("למחוק את הפרטים שלך מהמועדון? אפשר להירשם שוב בכל זמן."))return;
+    try{await TTCAuth.deleteMember();ME.member=null;closeSheet();toast("הפרטים נמחקו")}catch(e){$("#mErr").textContent="המחיקה לא הצליחה. נסו שוב."}};
+}
+document.addEventListener("click",async e=>{
+  if(e.target.closest("#gIn")){
+    if(inApp)return openSheet(`<h2 class="post-h">קודם פותחים בדפדפן</h2><div class="post-t">גוגל לא מאפשרת להתחבר מתוך פייסבוק או אינסטגרם.
+1. לוחצים על שלוש הנקודות למעלה.
+2. בוחרים "פתיחה בדפדפן".
+3. שם לוחצים שוב על "כניסה".</div>`);
+    if(!window.TTCAuth)return toast("רגע, טוען…");
+    try{await TTCAuth.signIn()}catch(err){if(err&&err.code!=="auth/popup-closed-by-user"&&err.code!=="auth/cancelled-popup-request")toast("ההתחברות לא הצליחה. נסו שוב.")}
+  }
+  if(e.target.closest("#meEdit"))memberSheet();
+});
+function startAuth(){
+  addEventListener("ttc-auth-ready",()=>TTCAuth.onUser(async u=>{ME.user=u;ME.member=null;
+    if(u){try{ME.member=await TTCAuth.getMember()}catch(e){}}
+    renderMe();if(u&&!ME.member&&sheet.hidden)memberSheet()}),{once:true});
+  const sc=document.createElement("script");sc.src="auth.js?v="+(BUILD||"1");sc.defer=true;document.head.appendChild(sc);
+}
+const SIGNIN_ON=false; // switched on after the attendance-app rules (PR #96) are live and Google sign-in is enabled in Firebase
+if(SIGNIN_ON)introDone.then(()=>setTimeout(startAuth,300));
