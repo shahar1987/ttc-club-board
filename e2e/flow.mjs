@@ -151,18 +151,18 @@ async function adminFlow() {
 
   step = "admin-push"; await page.click("[data-tab=push]"); await page.waitForSelector("#pT");
   await page.fill("#pT", "האימון היום בוטל"); await page.click("#pGo"); await page.click("#pYes");
-  await page.waitForFunction(() => /ממתין לשליחה/.test(document.body.textContent), null, { timeout: 10000 });
+  await page.waitForSelector("text=ממתין לשליחה", { timeout: 10000 });
   assert.equal((await docs("pushRequests")).length, 1); ok("ניהול: התראה נכנסת לתור השליחה");
 
   step = "admin-members"; await page.click("[data-tab=members]");
-  await page.waitForFunction(() => +(document.querySelector("#mT")?.textContent) >= 1, null, { timeout: 10000 });
+  await page.waitForSelector("#ml .card b", { timeout: 10000 });
   await page.screenshot({ path: "shots/admin-3-members.png" }); ok("ניהול: רשימת הנרשמים נטענת");
   step = "admin-signups"; await page.click("[data-tab=signups]"); await page.waitForSelector("#sl .card", { timeout: 10000 }); ok("ניהול: מסך ההרשמות נטען");
   await ctx.close();
 
   step = "portal-shows-post"; ctx = await browser.newContext({ viewport: { width: 390, height: 844 } }); page = await ctx.newPage();
   await page.goto(APP); await page.waitForSelector("#gate:not([hidden])", { timeout: 10000 }); await page.click("#gateKid");
-  await page.waitForFunction(() => /אימון פתוח בשבת/.test(document.querySelector("#newsRail")?.textContent || ""), null, { timeout: 15000 });
+  await page.waitForSelector("#newsRail >> text=אימון פתוח בשבת", { timeout: 15000 });
   assert.ok(await page.$('#newsRail img[src^="data:image/jpeg"]'), "picture from the admin page shows in the portal");
   await page.screenshot({ path: "shots/admin-4-portal.png" }); ok("הפורטל מציג את העדכון החדש עם התמונה");
   await ctx.close();
