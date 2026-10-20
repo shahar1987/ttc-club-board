@@ -266,13 +266,23 @@ let deferredInstall=null;
 const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 const inApp=/FBAN|FBAV|Instagram|Line\//i.test(navigator.userAgent);
-addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;$("#installSec").hidden=standalone});
-if(!standalone&&(isIOS||inApp)){$("#installSec").hidden=false;$("#installTxt").textContent=inApp?"פתחו את הקישור בדפדפן (⋯ ← פתיחה בדפדפן) ואז הוסיפו למסך הבית.":"בספארי: כפתור השיתוף ← הוספה למסך הבית.";$("#installBtn").hidden=!(!inApp&&isIOS);$("#installBtn").textContent="איך?"}
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e});
+addEventListener("appinstalled",()=>{$("#installSec").hidden=true;toast("האפליקציה הותקנה")});
+// shown to everyone who isn't already inside the installed app; the button knows the right way per phone
+if(!standalone)$("#installSec").hidden=false;
+const howTo=(title,steps)=>openSheet(`<h2 class="post-h">${title}</h2><div class="post-t">${steps}</div>`);
 $("#installBtn").addEventListener("click",async()=>{track("click","install");
-  if(deferredInstall){deferredInstall.prompt();const r=await deferredInstall.userChoice.catch(()=>null);deferredInstall=null;if(r&&r.outcome==="accepted"){$("#installSec").hidden=true;toast("נוסף למסך הבית")}}
-  else if(isIOS)openSheet(`<h2 class="post-h">הוספה למסך הבית</h2><div class="post-t">1. לוחצים על כפתור השיתוף בתחתית ספארי (ריבוע עם חץ למעלה).
+  if(deferredInstall){deferredInstall.prompt();const r=await deferredInstall.userChoice.catch(()=>null);deferredInstall=null;if(r&&r.outcome==="accepted")$("#installSec").hidden=true;return}
+  if(inApp)return howTo("קודם פותחים בדפדפן",`הקישור נפתח עכשיו בתוך ${/Instagram/i.test(navigator.userAgent)?"אינסטגרם":"פייסבוק"}, ומשם אי אפשר להתקין.
+1. לוחצים על שלוש הנקודות (⋯) למעלה.
+2. בוחרים "פתיחה בדפדפן" (${isIOS?"ספארי":"כרום"}).
+3. בדפדפן לוחצים שוב על "התקנה".`);
+  if(isIOS)return howTo("התקנה באייפון",`1. לוחצים על כפתור השיתוף בתחתית ספארי (ריבוע עם חץ למעלה).
 2. גוללים ובוחרים "הוספה למסך הבית".
-3. לוחצים "הוסף". האייקון של המועדון יופיע לצד שאר האפליקציות.</div>`)});
+3. לוחצים "הוסף". הלוגו של המועדון יופיע לצד שאר האפליקציות.`);
+  howTo("התקנה באנדרואיד",`1. בכרום, לוחצים על שלוש הנקודות (⋮) למעלה.
+2. בוחרים "התקנת אפליקציה" או "הוספה למסך הבית".
+3. מאשרים. הלוגו של המועדון יופיע במסך הבית.`)});
 /* ---------- auto-update: an installed app stays open for days, so check for a new version whenever it comes back to the screen ---------- */
 let BUILD=null,DATA_AT=null;
 async function checkFresh(){

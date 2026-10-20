@@ -297,7 +297,7 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
 .stage img{position:absolute;left:50%;bottom:14px;width:210px;height:auto;margin-left:-105px;
   opacity:0;transform:scale(.55);animation:crest .7s cubic-bezier(.34,1.56,.64,1) .78s forwards}
 .stage .ln{position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;background:var(--line);transform:scaleX(0);animation:ln .5s var(--ease) .05s forwards}
-.stage .b{position:absolute;left:50%;bottom:2px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#f39a3d;box-shadow:inset -2px -2px 0 rgba(0,0,0,.08);
+.stage .b{position:absolute;left:50%;bottom:2px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#fff;box-shadow:inset -2px -2px 0 rgba(0,0,0,.07),0 2px 6px rgba(0,0,0,.22);
   transform:translateY(-270px);animation:fall .95s linear .1s forwards}
 .intro h1{font-family:var(--display);font-weight:400;font-size:28px;line-height:1.1;color:var(--green);margin:18px 0 4px;opacity:0;transform:translateY(8px);animation:up .5s var(--ease) 1.05s forwards}
 .intro p{margin:0;color:var(--muted);font-size:14px;opacity:0;transform:translateY(8px);animation:up .5s var(--ease) 1.2s forwards}
@@ -340,6 +340,9 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
   <div class="stagger">
     <div class="pad" id="noticeWrap"></div>
     <div class="pad" id="hero"></div>
+    <div class="pad" id="installSec" hidden style="margin-top:12px">
+      <div class="install"><img src="icon-192.png" alt=""><div><b>האפליקציה של המועדון</b><span id="installTxt">אייקון במסך הבית, נפתח כמו אפליקציה. בלי חנות, בחינם.</span></div><button class="btn" id="installBtn" style="min-height:44px;padding:8px 16px">התקנה</button></div>
+    </div>
     <div class="sec" id="nextSec"><div class="sec-h pad"><h2>הבאים בתור</h2><button class="more" data-go="leagues">כל הלוח</button></div><div class="rail" id="nextRail"></div></div>
     <div class="sec" id="resSec" hidden><div class="sec-h pad"><h2>תוצאות אחרונות</h2></div><div class="rail" id="resRail"></div></div>
     <div class="sec" id="newsSec" hidden><div class="sec-h pad"><h2>מה חדש במועדון</h2></div><div class="rail" id="newsRail"></div></div>
@@ -402,9 +405,6 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
       </div>
     </div>
 
-    <div class="sec" id="installSec" hidden>
-      <div class="install"><img src="icon-192.png" alt=""><div><b>המועדון במסך הבית</b><span id="installTxt">פותחים כמו אפליקציה, בלי חנות.</span></div><button class="btn" id="installBtn" style="min-height:40px;padding:8px 14px">הוספה</button></div>
-    </div>
 
     <div class="foot">
       <div>בשיתוף מתנ"ס אזורי מבואות החרמון ומועצה אזורית מבואות החרמון</div>
@@ -427,6 +427,6 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
 <div class="toast" id="toast" role="status"></div>
 </div>
 
-<script src="app.js?v=20261020134032" defer></script>
+<script src="app.js?v=20261020134157" defer></script>
 </body>
 </html>
