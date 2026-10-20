@@ -31,10 +31,10 @@ function cleanData(d){
   return{
     updated:str(d.updated,40),nextRanking:pick(d.nextRanking,DATE),teams,
     ours:(d.ours||[]).filter(c=>teams[c]),
-    leagues:(d.leagues||[]).filter(l=>/^[a-z0-9]{1,20}$/.test(l.id)).map(l=>({id:l.id,name:str(l.name,60),group:str(l.group,40),short:str(l.short,30),url:safeUrl(l.url),
+    leagues:(d.leagues||[]).filter(l=>/^[a-z0-9-]{1,30}$/i.test(l.id)).map(l=>({id:l.id,name:str(l.name,60),group:str(l.group,40),short:str(l.short,30),url:safeUrl(l.url),
       ourTeams:(l.ourTeams||[]).filter(c=>teams[c]),
       standings:(l.standings||[]).filter(r=>teams[r.t]).map(r=>({t:r.t,p:num(r.p),w:num(r.w),d:num(r.d),l:num(r.l),pts:num(r.pts)})),
-      matches:(l.matches||[]).filter(m=>teams[m.h]&&teams[m.a]&&DATE.test(m.d)).map(m=>({r:Math.max(1,Math.floor(num(m.r,1))),d:m.d,t:pick(m.t,TIME,"00:00"),h:m.h,a:m.a,res:pick(m.res,RES),w:teams[m.w]?m.w:""}))})),
+      matches:(l.matches||[]).filter(m=>teams[m.h]&&teams[m.a]&&DATE.test(m.d)).map(m=>({r:Math.max(1,Math.floor(num(m.r,1))),d:m.d,t:pick(m.t,TIME,"20:00"),h:m.h,a:m.a,res:pick(m.res,RES),w:teams[m.w]?m.w:""}))})),
     rosters:Object.fromEntries(Object.entries(d.rosters||{}).filter(([k])=>teams[k]).map(([k,v])=>[k,(v||[]).map(x=>Math.floor(num(x,-1))).filter(x=>x>0)])),
     players:(d.players||[]).filter(x=>num(x.id,-1)>0&&typeof x.n==="string").map(x=>({id:Math.floor(+x.id),n:str(x.n,60),c:pick(x.c,CODE,"S"),rank:numOrNull(x.rank),ch:numOrNull(x.ch),pts:num(x.pts)})),
     training:(d.training||[]).map(v=>({v:str(v.v,40),g:(v.g||[]).filter(Array.isArray).map(r=>r.slice(0,4).map(x=>str(x,60)))})),
@@ -42,8 +42,8 @@ function cleanData(d){
   };
 }
 // children (under-18 categories) show as first name + last initial, because the same page shows where and when training happens
-const MINOR=/^[BMCJY]/;
-const dn=p=>{if(!MINOR.test(p.c))return p.n;const w=p.n.trim().split(/\s+/);return w.length>1?w[0]+" "+w[w.length-1][0]+"׳":w[0]};
+const ADULT=/^S(\d0)?$/;
+const dn=p=>{if(ADULT.test(p.c))return p.n;const w=p.n.trim().split(/\s+/);return w.length>1?w[0]+" "+w[w.length-1][0]+"׳":w[0]};
 const when=(d,t)=>{const[dd,mm,yy]=d.split("/");const[h,mi]=(t||"00:00").split(":");return new Date(2000+ +yy,mm-1,+dd,+h,+mi)}; // viewers are in Israel; local clock is the venue clock
 const dshort=d=>{const x=when(d);return `${DAYS[x.getDay()]} ${x.getDate()}.${x.getMonth()+1}`};
 const ours=c=>D.ours.includes(c);
@@ -76,12 +76,13 @@ function moveBall(name,instant){
 addEventListener("resize",()=>moveBall(current,true));
 
 /* ---------- screens: direction-aware slide, per-screen scroll is kept ---------- */
-const ORDER=["home","leagues","rank","club"];let current="home",busySwap=null;
+const ORDER=["home","leagues","rank","club"];let current="home",swapAnims=[];
 function go(name,opts={}){
   if(!ORDER.includes(name))return;
   if(name===current){const s=$("#s-"+name);s.scrollTo({top:0,behavior:RM.matches?"auto":"smooth"});return}
   const from=$("#s-"+current),to=$("#s-"+name),dir=ORDER.indexOf(name)>ORDER.indexOf(current)?1:-1; // RTL: forward = slides in from the left
-  busySwap&&busySwap();
+  swapAnims.forEach(a=>a.cancel());swapAnims=[];
+  $$(".screen").forEach(s=>{if(s!==from)s.hidden=true;s.style.opacity="";s.style.transform=""});
   $$(".tab").forEach(t=>t.setAttribute("aria-selected",t.dataset.go===name));
   moveBall(name);haptic();
   to.hidden=false;
@@ -89,7 +90,7 @@ function go(name,opts={}){
     const dx=28*dir;
     const a=from.animate([{transform:"translateX(0)",opacity:1},{transform:`translateX(${dx}%)`,opacity:0}],{duration:300,easing:"cubic-bezier(.4,0,.2,1)",fill:"forwards"});
     const b=to.animate([{transform:`translateX(${-dx}%)`,opacity:0},{transform:"translateX(0)",opacity:1}],{duration:360,easing:"cubic-bezier(.2,.8,.2,1)"});
-    const done=()=>{from.hidden=true;a.cancel()};a.onfinish=done;busySwap=()=>{a.finish();b.finish()};
+    a.onfinish=()=>{if(from!==$("#s-"+current))from.hidden=true;a.cancel()};swapAnims=[a,b];
   }else from.hidden=true;
   current=name;
   if(!opts.silent){try{history.replaceState(null,"","#"+name)}catch(e){}}
@@ -147,7 +148,7 @@ function renderHome(){
       <div class="table" role="img" aria-label="${esc(D.teams[n.h])} נגד ${esc(D.teams[n.a])}"><span class="net"></span><span class="pp" aria-hidden="true"><i></i></span>${side(n.h)}<div class="vs">VS</div>${side(n.a)}</div>
       <div class="facts"><span>📅 ${dshort(n.d)}</span><span class="num">🕖 ${n.t}</span><span>📍 ${home?"בית ספר רמת כורזים":"משחק חוץ"}</span></div>
       <div class="count num" id="cd"></div></div>`;
-    const tick=()=>{const el=$("#cd");if(!el)return;let s=Math.max(0,(T-new Date())/1e3);
+    const tick=()=>{const el=$("#cd");if(!el)return;if(new Date()-T>3*3600e3){renderHome();return}let s=Math.max(0,Math.ceil((T-new Date())/6e4)*60);
       el.innerHTML=s>0?[[Math.floor(s/86400),"ימים"],[Math.floor(s%86400/3600),"שעות"],[Math.floor(s%3600/60),"דקות"]].map(([v,l])=>`<span>${v}<small>${l}</small></span>`).join(""):`<span style="font-size:15px">המשחק התחיל · בהצלחה!</span>`};
     tick();clearInterval(renderHome.iv);renderHome.iv=setInterval(tick,30e3);
   }else $("#hero").innerHTML=`<div class="hero"><div class="kick"><span class="dot"></span>אין משחקים קרובים בלוח</div></div>`;
@@ -164,14 +165,14 @@ function renderHome(){
 }
 function renderPosts(){
   const ps=(POSTS||[]).filter(x=>x&&x.title&&!x.hidden);
-  const bn=ps.filter(x=>x.banner).sort((a,b)=>String(b.date).localeCompare(String(a.date)))[0];
+  const bn=ps.filter(x=>x.banner).sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")))[0];
   $("#noticeWrap").innerHTML=bn?`<div class="notice" role="status"><b>הודעה</b><span>${esc(bn.title)}${bn.text?" · "+esc(bn.text):""}</span></div>`:"";
-  const list=ps.filter(x=>!x.banner).sort((a,b)=>(!!b.pin-!!a.pin)||String(b.date).localeCompare(String(a.date)));
+  const list=ps.filter(x=>!x.banner).sort((a,b)=>(!!b.pin-!!a.pin)||String(b.date||"").localeCompare(String(a.date||"")));
   const img=u=>/^img\/[\w.-]+$/.test(u||"")?u:"";
-  $("#newsRail").innerHTML=list.map(x=>`<button class="pcard" data-post="${esc(x.id)}">${img(x.img)?`<img src="${img(x.img)}" alt="" loading="lazy">`:""}<div class="in"><span class="dt">${x.date?new Date(x.date+"T12:00").toLocaleDateString("he-IL",{day:"numeric",month:"long"}):""}${x.pin?" · נעוץ":""}</span><h3>${esc(x.title)}</h3>${x.text?`<p>${esc(x.text)}</p>`:""}</div></button>`).join("");
+  $("#newsRail").innerHTML=list.map(x=>`<button class="pcard" data-post="${POSTS.indexOf(x)}">${img(x.img)?`<img src="${img(x.img)}" alt="" loading="lazy">`:""}<div class="in"><span class="dt">${/^\d{4}-\d{2}-\d{2}$/.test(x.date||"")?new Date(x.date+"T12:00").toLocaleDateString("he-IL",{day:"numeric",month:"long"}):""}${x.pin?" · נעוץ":""}</span><h3>${esc(x.title)}</h3>${x.text?`<p>${esc(x.text)}</p>`:""}</div></button>`).join("");
   $("#newsSec").hidden=!list.length;
 }
-document.addEventListener("click",e=>{const b=e.target.closest("[data-post]");if(!b)return;const x=POSTS.find(p=>p.id===b.dataset.post);if(!x)return;
+document.addEventListener("click",e=>{const b=e.target.closest("[data-post]");if(!b)return;const x=POSTS[+b.dataset.post];if(!x)return;
   const img=/^img\/[\w.-]+$/.test(x.img||"")?x.img:"",link=/^https:\/\//.test(x.link||"")?x.link:"";
   openSheet(`${img?`<img class="post-img" src="${img}" alt="">`:""}<h2 class="post-h">${esc(x.title)}</h2>${x.text?`<div class="post-t">${esc(x.text)}</div>`:""}${link?`<a class="btn" style="margin-top:14px" href="${esc(link)}" target="_blank" rel="noopener">${esc(x.linkText||"לפרטים")}</a>`:""}`);track("post",x.title)});
 
@@ -183,17 +184,17 @@ function renderLeagueTabs(){
   segment($("#lgSeg"),b=>{LG=D.leagues.find(l=>l.id===b.dataset.lg);renderLeague(0);track("league",LG.id)});
   segment($("#viewSeg"),b=>{const old=VIEW;VIEW=b.dataset.v;renderLeague(["table","rounds","ours","squad"].indexOf(VIEW)>["table","rounds","ours","squad"].indexOf(old)?1:-1);track("league",LG.id+":"+VIEW)});
 }
-function defaultRound(l){const now=new Date();const up=l.matches.filter(m=>!played(m)&&when(m.d,m.t)>now-3*3600e3).sort((a,b)=>when(a.d,a.t)-when(b.d,b.t));return up.length?up[0].r:Math.max(...l.matches.map(m=>m.r))}
+function defaultRound(l){const now=new Date();const up=l.matches.filter(m=>!played(m)&&when(m.d,m.t)>now-3*3600e3).sort((a,b)=>when(a.d,a.t)-when(b.d,b.t));return up.length?up[0].r:Math.max(1,...l.matches.map(m=>m.r))}
 function mrow(m){const mine=ours(m.h)||ours(m.a),nm=c=>`<span class="${ours(c)?"us":""} ${m.w===c?"wn":""}">${esc(short(c))}</span>`;
   return `<div class="mrow${mine?" mine":""}"><div class="h">${nm(m.h)}</div><div class="sc num">${played(m)?esc(m.res):m.t}</div><div class="a">${nm(m.a)}</div><div class="when num">${dshort(m.d)}</div></div>`}
 function slideIn(el,dir){if(RM.matches||!dir)return;el.animate([{transform:`translateX(${-18*dir}px)`,opacity:0},{transform:"none",opacity:1}],{duration:280,easing:"cubic-bezier(.2,.8,.2,1)"})}
 function renderLeague(dir){
-  const l=LG,v=$("#lgView");
+  const l=LG,v=$("#lgView");if(!l){v.innerHTML='<div class="empty">אין עדיין נתוני ליגה</div>';$("#lgSrc").textContent="";return}
   $("#lgSrc").innerHTML=`${esc(l.name)} · ${esc(l.group)} · עונת 2026/27 · <a href="${esc(l.url)}" target="_blank" rel="noopener">באתר האיגוד</a>`;
   if(VIEW==="table"){
     v.innerHTML=`<div class="card"><table class="st"><thead><tr><th>#</th><th>קבוצה</th><th>מש׳</th><th>נצ׳</th><th>הפ׳</th><th>נק׳</th></tr></thead><tbody>${l.standings.map((r,i)=>`<tr class="${ours(r.t)?"us":""}"><td><span class="pos">${i+1}</span></td><td>${esc(short(r.t))}</td><td class="num">${r.p}</td><td class="num">${r.w}</td><td class="num">${r.l}</td><td class="num pts">${r.pts}</td></tr>`).join("")}</tbody></table></div>`;
   }else if(VIEW==="rounds"){
-    const max=Math.max(...l.matches.map(m=>m.r));let r=ROUND[l.id]||(ROUND[l.id]=defaultRound(l));
+    const max=Math.max(1,...l.matches.map(m=>m.r));let r=ROUND[l.id]||(ROUND[l.id]=defaultRound(l));
     const ms=l.matches.filter(m=>m.r===r).sort((a,b)=>when(a.d,a.t)-when(b.d,b.t));
     v.innerHTML=`<div class="stepper"><button id="rPrev" aria-label="המחזור הקודם" ${r<=1?"disabled":""}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg></button>
       <div class="lbl"><b>מחזור ${r}</b><span>מתוך ${max}</span></div>
@@ -241,20 +242,20 @@ function showPlayer(id){const p=D.players.find(x=>x.id===id);if(!p)return;
   if(p.rank&&!RM.matches){const el=$("#plRank"),end=p.rank,t0=performance.now();const step=t=>{const k=Math.min(1,(t-t0)/750),e=1-Math.pow(1-k,3);el.textContent="#"+Math.round(end+(1-e)*500);if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step)}
   track("player",dn(p))}
 document.addEventListener("click",e=>{const b=e.target.closest("[data-pid]");if(b)showPlayer(+b.dataset.pid)});
-$("#q").addEventListener("input",e=>{const v=e.target.value.trim();clearTimeout(e.target.t);if(v.length<2)return;
-  e.target.t=setTimeout(()=>{const p=D.players.find(x=>dn(x).includes(v));if(p){e.target.blur();showPlayer(p.id)}else toast("לא מצאנו שחקן בשם הזה")},450)});
+$("#q").addEventListener("input",e=>{const v=e.target.value.trim();clearTimeout(e.target.t);if(v.length<3)return;
+  e.target.t=setTimeout(()=>{const m=D.players.filter(x=>dn(x).includes(v));if(m.length===1){e.target.blur();showPlayer(m[0].id)}else if(!m.length)toast("לא מצאנו שחקן בשם הזה")},600)});
 
 /* ---------- club ---------- */
 function renderClub(){
   $("#venueSeg").innerHTML=D.training.map((v,i)=>`<button role="tab" data-i="${i}" aria-selected="${i===0}">${esc(v.v)}</button>`).join("");
-  const slots=i=>{$("#slots").innerHTML=D.training[i].g.map(([g,d,t,c])=>`<div class="slot"><b>${esc(g)}</b><span class="t num">${esc(t)}</span><span>ימים ${esc(d)}</span><span>מאמן: ${esc(c)}</span></div>`).join("")};
+  const slots=i=>{const v=D.training[i];$("#slots").innerHTML=!v?"":v.g.map(([g,d,t,c])=>`<div class="slot"><b>${esc(g)}</b><span class="t num">${esc(t)}</span><span>ימים ${esc(d)}</span><span>מאמן: ${esc(c)}</span></div>`).join("")};
   slots(0);segment($("#venueSeg"),b=>{slots(+b.dataset.i);slideIn($("#slots"),1)});
   $("#ages").innerHTML=AGES.map(([t,s,f])=>{const ps=D.players.filter(p=>f(p.c)).sort((a,b)=>b.pts-a.pts);if(!ps.length)return"";
     return `<div class="age"><h3>${t}<span>${s?s+" · ":""}${ps.length} שחקנים</span></h3><div class="chips">${ps.map(p=>`<button class="chip" data-pid="${p.id}">${esc(dn(p))}</button>`).join("")}</div></div>`}).join("");
-  const now=new Date(),ev=D.events.filter(e=>when(e[0],"23:59")>=now).slice(0,5);
+  const now=new Date(),ev=D.events.filter(e=>when(e[0],"23:59")>=now).sort((a,b)=>when(a[0])-when(b[0])).slice(0,5);
   $("#evs").innerHTML=ev.map(([d,n,u])=>{const x=when(d);return `<a class="ev" href="${esc(u)}" target="_blank" rel="noopener"><span class="d num">${x.getDate()}<small>${x.toLocaleDateString("he-IL",{month:"short"})}</small></span><span>${esc(n)}</span></a>`}).join("");
   $("#evSec").hidden=!ev.length;
-  $("#upd").textContent="עודכן "+new Date(D.updated).toLocaleString("he-IL",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
+  const U=new Date(D.updated);$("#upd").textContent=isNaN(U)?"":"עודכן "+U.toLocaleString("he-IL",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
 }
 $("#copyPhone").addEventListener("click",async()=>{try{await navigator.clipboard.writeText("0504999149");toast("המספר הועתק")}catch(e){toast("050-4999149")}});
 document.addEventListener("click",e=>{const a=e.target.closest("[data-soc]");if(a)track("social",a.dataset.soc)});
@@ -274,10 +275,14 @@ $("#installBtn").addEventListener("click",async()=>{track("click","install");
 /* ---------- auto-update: an installed app stays open for days, so check for a new version whenever it comes back to the screen ---------- */
 let BUILD=null,DATA_AT=null;
 async function checkFresh(){
-  try{const[v,d]=await Promise.all([fetch("version.json",{cache:"no-store"}).then(r=>r.json()),fetch("data.json",{cache:"no-store"}).then(r=>r.json())]);
-    if(BUILD===null){BUILD=v.v;DATA_AT=d.updated;return}
-    if(v.v!==BUILD||d.updated!==DATA_AT)location.reload();
-  }catch(e){}
+  const get=u=>fetch(u,{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null);
+  const[v,d]=await Promise.all([get("version.json"),get("data.json")]);
+  const vv=v&&v.v,du=d&&d.updated;
+  if(BUILD===null){BUILD=vv||"";DATA_AT=du||"";return}
+  const changed=(vv&&vv!==BUILD)||(du&&du!==DATA_AT);
+  if(!changed)return;
+  if(!sheet.hidden||document.activeElement===$("#q"))return; // busy: try again on the next check
+  location.reload();
 }
 checkFresh();
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){checkFresh();swReg&&swReg.update().catch(()=>{})}});
@@ -285,7 +290,7 @@ setInterval(()=>{if(document.visibilityState==="visible")checkFresh()},10*60e3);
 let swReg=null;
 if("serviceWorker" in navigator&&location.protocol==="https:"){
   const had=!!navigator.serviceWorker.controller;
-  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had)location.reload()});
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had&&sheet.hidden&&document.activeElement!==$("#q"))location.reload()});
   addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{swReg=r;r.update().catch(()=>{})}).catch(()=>{}));
 }
 
@@ -296,7 +301,7 @@ const introDone=new Promise(r=>setTimeout(r,seen||RM.matches?150:1900));
 function hideSplash(){introDone.then(()=>{$("#splash").classList.add("gone");$("#s-home").classList.add("enter-home")})}
 /* ---------- boot ---------- */
 function boot(){
-  renderHome();renderPosts();renderLeagueTabs();renderLeague(0);renderRank();renderClub();
+  for(const f of [renderHome,renderPosts,renderLeagueTabs,()=>renderLeague(0),renderRank,renderClub])try{f()}catch(e){console.error(e)}
   const start=(location.hash||"").slice(1);
   moveBall("home",true);
   hideSplash();
