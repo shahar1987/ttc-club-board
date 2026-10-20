@@ -273,7 +273,9 @@ document.addEventListener("click",e=>{const a=e.target.closest("[data-soc]");if(
 let deferredInstall=null;
 const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
-const inApp=/FBAN|FBAV|Instagram|Line\//i.test(navigator.userAgent);
+// Google refuses sign-in inside apps' built-in browsers; send those visitors to a real browser first
+const UA=navigator.userAgent;
+const inApp=/FBAN|FBAV|Instagram|Line\/|; wv\)|LinkedInApp|BytedanceWebview|musical_ly|Snapchat|MicroMessenger/i.test(UA)||(/iPhone|iPad|iPod/.test(UA)&&!/Safari\//.test(UA)&&!navigator.standalone);
 addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e});
 addEventListener("appinstalled",()=>{$("#installSec").hidden=true;toast("האפליקציה הותקנה")});
 // shown to everyone who isn't already inside the installed app; the button knows the right way per phone
@@ -425,6 +427,9 @@ if(SIGNIN_ON){introDone.then(()=>setTimeout(startAuth,300));addEventListener("lo
 /* ---------- event popup: after a member finished joining, an active event post pops up once with one-tap registration ---------- */
 const SHIRTS=["XS","S","M","L","XL","XXL","ילדים 6","ילדים 8","ילדים 10","ילדים 12","ילדים 14"];
 const BIRTH_OK=v=>/^\d{1,2}[./]\d{1,2}[./]\d{4}$/.test(v);
+// accept how people actually type a date: 31/12/1985, 31-12-1985, 31.12.85, 31 12 1985
+function normBirth(v){const m=String(v).trim().match(/^(\d{1,2})\D+(\d{1,2})\D+(\d{2}|\d{4})$/);if(!m)return String(v).trim();
+  let y=m[3];if(y.length===2)y=(+y<=new Date().getFullYear()%100?"20":"19")+y;return `${+m[1]}.${+m[2]}.${y}`}
 function activeEvent(){const today=new Date().toISOString().slice(0,10);
   return (POSTS||[]).find(p=>p&&!p.hidden&&p.popup&&/^[a-z0-9-]{3,40}$/.test(p.popup.event||"")&&(!p.popup.until||p.popup.until>=today))}
 function personRow(i,p,heats){const opt=(arr,v)=>arr.map(x=>`<option${x===v?" selected":""}>${esc(x)}</option>`).join("");
@@ -457,13 +462,13 @@ async function eventSheet(post,force,fromPop){
   $("#evLater").onclick=()=>{store.set("ttc_pop_"+ev.event,String(Date.now()));closeSheet()};
   $("#evForm").onsubmit=async e=>{e.preventDefault();const err=$("#evErr");err.textContent="";
     const city=$("#evCity").value.trim();
-    const people=[...rows.querySelectorAll(".pp-row")].map(r=>({firstName:r.querySelector(".f-first").value.trim(),lastName:r.querySelector(".f-last").value.trim(),heat:r.querySelector(".f-heat").value,gender:r.querySelector(".f-gender").value,birth:r.querySelector(".f-birth").value.trim().replace(/\//g,"."),shirt:r.querySelector(".f-shirt").value,city,phone:ME.member.phone}));
+    const people=[...rows.querySelectorAll(".pp-row")].map(r=>({firstName:r.querySelector(".f-first").value.trim(),lastName:r.querySelector(".f-last").value.trim(),heat:r.querySelector(".f-heat").value,gender:r.querySelector(".f-gender").value,birth:normBirth(r.querySelector(".f-birth").value),shirt:r.querySelector(".f-shirt").value,city,phone:ME.member.phone}));
     const bad=people.findIndex(p=>!p.firstName||!p.lastName||!BIRTH_OK(p.birth));
     if(bad>=0)return err.textContent=`חסר שם או תאריך לידה (בפורמט 31.12.1985) אצל ${bad===0?"המשתתף הראשון":"משתתף "+(bad+1)}.`;
     if(!city)return err.textContent="חסרה עיר / יישוב.";
     $("#evSave").disabled=true;
     try{await TTCAuth.signUp(ev.event,people,ME.member.name);closeSheet();toast("נרשמתם! 🎉");track("click","event:"+ev.event)}
-    catch(x){$("#evSave").disabled=false;err.textContent="ההרשמה לא נשמרה. בדקו את החיבור ונסו שוב."}};
+    catch(x){$("#evSave").disabled=false;err.textContent=x&&x.code==="permission-denied"?"ההרשמה לא נשמרה: אחד הפרטים לא תקין (שם שמתחיל בסימן, טלפון או תאריך). בדקו ונסו שוב, או כתבו לנו בוואטסאפ 050-4999149.":"ההרשמה לא נשמרה. בדקו את החיבור לאינטרנט ונסו שוב."}};
 }
 let popReturn=null;
 let popAction=null,popLaterFn=null;

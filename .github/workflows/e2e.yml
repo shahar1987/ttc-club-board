@@ -1,0 +1,36 @@
+name: E2E sign-in and registration
+# Full flow in a real browser: gate → Google sign-in → name+phone → event popup → registration → cancel,
+# against the Firebase emulators with the live firestore.rules from the attendance repo.
+on:
+  push:
+    branches: [main, e2e]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - name: Rules from the attendance repo
+        run: curl -fsSL https://raw.githubusercontent.com/shahar1987/ttc-mvh-attendance/main/firestore.rules -o e2e/firestore.rules
+      - name: Tools
+        working-directory: e2e
+        run: npm i --no-audit --no-fund --no-save firebase-tools@14 playwright@1.48.2 && npx playwright install --with-deps chromium
+      - name: Site wired to the emulators
+        run: |
+          mkdir site && cp -r *.html *.js *.json *.png *.css fonts img site/ 2>/dev/null || true
+          cp e2e/auth-e2e.js site/auth.js
+          sed -i "s#connect-src 'self'#connect-src 'self' http://127.0.0.1:9099 http://127.0.0.1:8080#; s#frame-src #frame-src http://127.0.0.1:9099 #" site/index.html
+          (cd site && python3 -m http.server 8000 >/dev/null 2>&1 &)
+      - name: Run
+        working-directory: e2e
+        run: mkdir -p shots && npx firebase emulators:exec --only auth,firestore --project demo-ttcmh "node flow.mjs"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: shots, path: e2e/shots }
