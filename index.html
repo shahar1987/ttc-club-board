@@ -47,7 +47,7 @@
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;margin:0}
-body{background:var(--desk);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;overflow:hidden;-webkit-font-smoothing:antialiased;text-size-adjust:100%}
+body{background:var(--desk);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;overflow:hidden;-webkit-font-smoothing:antialiased;text-size-adjust:100%}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
 a{color:inherit}
 [hidden]{display:none!important}
@@ -67,7 +67,15 @@ a{color:inherit}
   background:var(--glass);-webkit-backdrop-filter:blur(18px) saturate(170%);backdrop-filter:blur(18px) saturate(170%);transition:box-shadow .25s}
 .top.scrolled{box-shadow:0 1px 0 var(--line)}
 .top .row{display:flex;align-items:center;gap:12px;min-height:44px}
-.top h1{font-family:var(--display);font-weight:400;font-size:28px;line-height:1.05;letter-spacing:-.01em;margin:0;flex:1;min-width:0}
+.top h1{font-family:var(--display);font-weight:400;font-size:28px;line-height:1.05;letter-spacing:-.01em;margin:0;flex:1;min-width:0;transform-origin:100% 50%;transition:transform .3s var(--ease)}
+.top.scrolled h1{transform:scale(.78)}
+.top .sub{transition:opacity .25s,max-height .3s var(--ease);max-height:3em;overflow:hidden}
+.top.scrolled .sub{opacity:0;max-height:0}
+/* pull to refresh: a ping-pong ball drops in and bounces while the data reloads */
+.ptr{position:absolute;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;z-index:7;width:20px;height:20px;margin-left:-10px;border-radius:50%;background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.25),inset -3px -3px 0 rgba(0,0,0,.06);opacity:0;pointer-events:none;transform:translateY(-30px)}
+.ptr.spin{animation:ptrb .5s cubic-bezier(.3,0,.7,1) infinite alternate}
+@keyframes ptrb{from{transform:translateY(20px)}to{transform:translateY(64px) scale(1.15,.85)}}
+@media (prefers-reduced-motion:reduce){.top h1,.top .sub{transition:none}.ptr.spin{animation:none;transform:translateY(40px)}}
 .top .sub{color:var(--muted);font-size:13px;margin-top:2px}
 
 .crest{width:44px;height:44px;object-fit:contain;flex:none;display:block}
@@ -374,6 +382,7 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
 
 <!-- HOME -->
 <section class="screen" id="s-home" data-tab="home" aria-label="בית">
+  <span class="ptr" id="ptr" aria-hidden="true"></span>
   <header class="top pad"><div class="row">
     <img class="crest" src="mark.png" alt="סמל המועדון" width="44" height="44">
     <div class="brand"><b>מבואות החרמון</b><span>מועדון טניס שולחן ע"ש רוני גלבוע</span></div>
@@ -486,6 +495,6 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
 <div class="toast" id="toast" role="status"></div>
 </div>
 
-<script src="app.js?v=20261020153345" defer></script>
+<script src="app.js?v=20261020153646" defer></script>
 </body>
 </html>

@@ -368,7 +368,7 @@ function memberSheet(){
   <form class="form" id="mForm" novalidate>
     <label>שם מלא<input type="text" id="mName" maxlength="80" autocomplete="name" value="${esc(m?m.name:ME.user.name)}" required></label>
     <label>טלפון נייד<input type="tel" id="mPhone" maxlength="20" inputmode="tel" autocomplete="tel" placeholder="050-0000000" value="${esc(m?m.phone:"")}" required></label>
-    <div class="why">למה צריך: כדי לזהות אתכם כשחקנים או כהורים במועדון וליצור קשר בענייני המועדון. רק מנהל המועדון רואה את הפרטים. אין חובה למסור אותם, ולא נשלח פרסומות. <a href="privacy.html">מדיניות הפרטיות</a></div>
+    <div class="why">למה צריך: כדי לזהות אתכם כשחקנים או כהורים במועדון וליצור קשר בענייני המועדון. רק מנהל המועדון רואה את הפרטים (מי שמזמין חברים עשוי להופיע ב"גביע החברים" בשם פרטי ואות). אין חובה למסור אותם, ולא נשלח פרסומות. <a href="privacy.html">מדיניות הפרטיות</a></div>
     <label class="chk"><input type="checkbox" id="mOk" ${m?"checked":""}><span>אני בן/בת 18 ומעלה (הורה או שחקן בוגר), קראתי את <a href="privacy.html">מדיניות הפרטיות</a> ואני מסכים/ה שהפרטים יישמרו לצורך זה</span></label>
     <div class="err" id="mErr" role="alert"></div>
     <button class="btn" type="submit" id="mSave">${isNew?"שמירה":"שמירת שינויים"}</button>
@@ -504,3 +504,18 @@ document.addEventListener("click",async e=>{if(!e.target.closest("#invite"))retu
     showPop({title:`${from} מזמין/ה אותך למועדון 🏓`,text:"אימון ניסיון ראשון בחינם, לכל הגילים ובכל מועד.\nכותבים לנו ונתאם יחד מתי מתאים לך."},{img:"logo.png",go:"לתיאום אימון ניסיון",
       action:()=>{store.set("ttc_invited","1");track("click","invite-book");open("https://wa.me/972504999149?text="+encodeURIComponent(`היי, הגעתי דרך ${from} ואשמח לתאם אימון ניסיון 🏓`),"_blank","noopener")},
       later:()=>store.set("ttc_invited","1")})},900))})();
+
+/* ---------- pull to refresh on home ---------- */
+(()=>{const home=$("#s-home"),ball=$("#ptr");let y0=null,dy=0,busy=false;
+  home.addEventListener("touchstart",e=>{if(busy||home.scrollTop>0)return;y0=e.touches[0].clientY;dy=0},{passive:true});
+  home.addEventListener("touchmove",e=>{if(y0===null)return;dy=Math.max(0,e.touches[0].clientY-y0);if(home.scrollTop>0){y0=null;return}
+    const k=Math.min(1,dy/90);ball.style.opacity=k;ball.style.transform=`translateY(${-30+dy*.6}px) rotate(${dy*3}deg)`},{passive:true});
+  home.addEventListener("touchend",async()=>{if(y0===null)return;y0=null;
+    if(dy<90){ball.style.opacity=0;ball.style.transform="";return}
+    busy=true;ball.style.transform="";ball.classList.add("spin");haptic();
+    try{const[d,p,sp]=await Promise.all([fetch("data.json",{cache:"no-store"}).then(r=>r.json()),fetch("posts.json",{cache:"no-store"}).then(r=>r.ok?r.json():{}).catch(()=>({})),staffPosts()]);
+      D=cleanData(d);POSTS=(Array.isArray(p.posts)?p.posts:[]).concat(sp);
+      for(const f of [renderHome,renderPosts,()=>renderLeague(0),renderRank,renderClub])try{f()}catch(e){}
+      toast("עודכן ✓")}catch(e){toast("אין חיבור כרגע")}
+    await new Promise(r=>setTimeout(r,500));ball.classList.remove("spin");ball.style.opacity=0;busy=false});
+})();
