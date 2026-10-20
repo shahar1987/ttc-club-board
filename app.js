@@ -1,14 +1,16 @@
 "use strict";
 /* ---------- anonymous stats -> Google Sheet in the club Drive (append-only); no names or IPs ---------- */
 const STATS_URL="";
-const VID=(()=>{try{let v=localStorage.getItem("ttc_v");if(!v){v=Math.random().toString(36).slice(2,12);localStorage.setItem("ttc_v",v)}return v}catch(e){return "anon"}})();
+const store={get:k=>{try{return localStorage.getItem(k)}catch(e){return null}},set:(k,v)=>{try{v===null?localStorage.removeItem(k):localStorage.setItem(k,v)}catch(e){}}};
+let CONSENT=store.get("ttc_consent"); // "yes" | "no" | null (not asked yet)
+const vid=()=>{let v=store.get("ttc_v");if(!v){v=Math.random().toString(36).slice(2,12);store.set("ttc_v",v)}return v};
 const SRC=(()=>{const x=location.search+" "+document.referrer;return /fbclid|facebook|fb\.com/i.test(x)?"facebook":/instagram|igsh/i.test(x)?"instagram":/whatsapp|wa\.me/i.test(x)?"whatsapp":document.referrer?"other":"direct"})();
 const DEV=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)?"mobile":"desktop";
 const QUEUE=[];let qTimer=0;
-function track(t,n){if(!STATS_URL)return;QUEUE.push({t,n:String(n||"").slice(0,80),v:VID,s:SRC,d:DEV});clearTimeout(qTimer);qTimer=setTimeout(flush,1500)}
+function track(t,n){if(!STATS_URL||CONSENT!=="yes")return;QUEUE.push({t,n:String(n||"").slice(0,80),v:vid(),s:SRC,d:DEV});clearTimeout(qTimer);qTimer=setTimeout(flush,1500)}
 function flush(){if(!STATS_URL||!QUEUE.length)return;try{fetch(STATS_URL,{method:"POST",mode:"no-cors",keepalive:true,body:JSON.stringify(QUEUE.splice(0,20))})}catch(e){}}
 addEventListener("pagehide",flush);
-track("view","home");
+
 
 /* ---------- helpers ---------- */
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -113,13 +115,16 @@ addEventListener("resize",()=>$$(".seg").forEach(placePill));
 /* ---------- bottom sheet: drag to dismiss with momentum projection and rubber-banding ---------- */
 const sheet=$("#sheet"),scrim=$("#scrim");let sheetY=0,sheetH=0,sheetStop=null;
 const setY=y=>{sheetY=y;sheet.style.transform=`translateY(${y}px)`;scrim.style.opacity=String(Math.max(0,1-y/Math.max(1,sheetH)))};
+let sheetReturn=null;
 function openSheet(html){
-  const wasHidden=sheet.hidden;$("#sheetBody").innerHTML=html;$("#sheetBody").scrollTop=0;sheet.hidden=false;scrim.hidden=false;scrim.style.pointerEvents="";
+  const wasHidden=sheet.hidden;if(wasHidden)sheetReturn=document.activeElement;$("#sheetBody").innerHTML=html;$("#sheetBody").scrollTop=0;sheet.hidden=false;scrim.hidden=false;scrim.style.pointerEvents="";
   sheetH=sheet.getBoundingClientRect().height;sheetStop&&sheetStop();
   sheetStop=spring({from:wasHidden?sheetH:Math.min(sheetY,sheetH),to:0,response:.38,damping:.86,onUpdate:setY});
+  if(wasHidden)requestAnimationFrame(()=>sheet.focus({preventScroll:true}));
 }
-function closeSheet(v=0){scrim.style.pointerEvents="none";sheetStop&&sheetStop();sheetStop=spring({from:sheetY,to:sheetH+40,velocity:v,response:.32,damping:1,onUpdate:setY,onDone:()=>{sheet.hidden=true;scrim.hidden=true}})}
+function closeSheet(v=0){scrim.style.pointerEvents="none";sheetStop&&sheetStop();sheetStop=spring({from:sheetY,to:sheetH+40,velocity:v,response:.32,damping:1,onUpdate:setY,onDone:()=>{sheet.hidden=true;scrim.hidden=true;sheetReturn&&sheetReturn.focus&&sheetReturn.focus({preventScroll:true});sheetReturn=null}})}
 scrim.addEventListener("click",()=>closeSheet());
+$("#sheetClose").addEventListener("click",()=>closeSheet());
 addEventListener("keydown",e=>{if(e.key==="Escape"&&!sheet.hidden)closeSheet()});
 (()=>{let start=null,hist=[];
   sheet.addEventListener("pointerdown",e=>{const body=$("#sheetBody");if(e.target.closest("a,button")&&!e.target.closest("#grab"))return;
@@ -323,3 +328,12 @@ Promise.all([
   fetch("posts.json",{cache:"no-store"}).then(r=>r.ok?r.json():{}).catch(()=>({}))
 ]).then(([d,p])=>{D=cleanData(d);POSTS=Array.isArray(p.posts)?p.posts:[];boot()})
  .catch(()=>{hideSplash();moveBall("home",true);$("#hero").innerHTML='<div class="hero"><div class="kick">אין חיבור כרגע. נסו לרענן בעוד רגע.</div></div>'});
+
+/* ---------- analytics consent: asked once, only when stats are switched on; changeable from the footer ---------- */
+function setConsent(v){CONSENT=v;store.set("ttc_consent",v);if(v!=="yes")store.set("ttc_v",null);$("#consent").hidden=true;$("#statsState").textContent=v==="yes"?"פעילה":"כבויה";if(v==="yes")track("view","home")}
+if(STATS_URL){
+  $("#statsPref").hidden=false;$("#statsState").textContent=CONSENT==="yes"?"פעילה":"כבויה";
+  if(!CONSENT)introDone.then(()=>setTimeout(()=>{$("#consent").hidden=false},1500));else if(CONSENT==="yes")track("view","home");
+  $("#consentYes").onclick=()=>setConsent("yes");$("#consentNo").onclick=()=>setConsent("no");
+  $("#statsPref").onclick=()=>{setConsent(CONSENT==="yes"?"no":"yes");toast(CONSENT==="yes"?"הסטטיסטיקה הופעלה":"הסטטיסטיקה כובתה")};
+}
