@@ -10,7 +10,7 @@ const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).
 const fmtDate = (v) => { const t = v && (typeof v.toDate === "function" ? v.toDate() : new Date(v)); return t && !isNaN(t) ? t.toLocaleString("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) : ""; };
 const GICON = '<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
 
-let USER = null, TAB = "posts", A = null, ROLE = "owner";
+let USER = null, TAB = "posts", A = null, ROLE = "owner", ASKED = false;
 const main = $("#main");
 let toastT;
 function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2600); }
@@ -27,7 +27,7 @@ async function run(fn, okMsg) {
 function signedOut() {
   $("#tabbar").hidden = true;
   main.innerHTML = `<div class="center screen"><img src="logo.png" alt=""><h2>כניסה לניהול</h2><div class="muted">רק לבעל המועדון</div><button class="gbtn" id="in" type="button">${GICON}כניסה עם Google</button></div>`;
-  $("#in").onclick = async () => { try { await TTCAuth.signIn(); } catch (e) { if (e && e.code === "auth/popup-blocked") toast("הדפדפן חסם את חלון הכניסה. לחצו שוב"); } };
+  $("#in").onclick = async () => { ASKED = true; try { await TTCAuth.signIn(); } catch (e) { if (e && e.code === "auth/popup-blocked") toast("הדפדפן חסם את חלון הכניסה. לחצו שוב"); } };
 }
 function notOwner() {
   $("#tabbar").hidden = true;
@@ -47,6 +47,8 @@ function go(t) { if (!TABS.some((x) => x[0] === t)) t = "posts"; TAB = t; tabs()
 addEventListener("ttc-auth-ready", () => {
   A = TTCAuth.admin;
   TTCAuth.onUser(async (u) => {
+    // never straight in: a session left from an earlier visit is closed, so every visit starts with the Google sign-in
+    if (u && !ASKED) { await TTCAuth.signOut(); return; }
     USER = u;
     if (!u) return signedOut();
     if (await isOwner(u.email)) { ROLE = "owner"; TABS = ALL_TABS; }
@@ -57,6 +59,12 @@ addEventListener("ttc-auth-ready", () => {
   });
 }, { once: true });
 const sc = document.createElement("script"); sc.src = "auth-admin.js"; document.head.appendChild(sc);
+// left in the background for 10 minutes: closed again, sign in to continue
+let hiddenAt = 0;
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) hiddenAt = Date.now();
+  else if (USER && hiddenAt && Date.now() - hiddenAt > 10 * 60e3) { ASKED = false; TTCAuth.signOut(); }
+});
 
 /* ---------- updates (boardPosts) ---------- */
 async function posts() {
