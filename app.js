@@ -347,7 +347,7 @@ function renderMe(){
   if(!ME.user){el.innerHTML=`<div class="tx"><b>האזור האישי</b>התחברו כדי שנזהה אתכם במועדון ונעדכן אתכם. הצפייה באפליקציה פתוחה גם בלי.</div><button class="gbtn" id="gIn" type="button">${GICON}כניסה</button>`;return}
   if(!ME.member){el.innerHTML=`<div class="tx"><b>עוד צעד קטן</b>נשאר רק להוסיף טלפון.</div><button class="btn" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">השלמה</button>`;return}
   el.innerHTML=`<div class="tx"><b>${esc(ME.member.name)}</b>מחובר/ת · ${esc(ME.user.email)}</div><button class="btn ghost" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">הפרטים שלי</button>`;
-  isOwner(ME.user.email).then(o=>{if(o&&!$("#adminLink"))el.insertAdjacentHTML("afterend",'<a class="btn" id="adminLink" href="https://claude.ai/artifact/3SXiwqugcLXd7LS3ZZ82CY" target="_blank" rel="noopener" style="margin-top:8px;width:100%">דשבורד ניהול</a>')});
+  isOwner(ME.user.email).then(o=>{if(o&&!$("#adminLink"))$("#tabbar").insertAdjacentHTML("beforeend",'<a class="tab" id="adminLink" href="https://claude.ai/artifact/3SXiwqugcLXd7LS3ZZ82CY" target="_blank" rel="noopener"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>ניהול</a>');moveBall(current,true)});
 }
 // the owner's address is kept only as a hash in this public code; the dashboard itself checks the Claude account
 const OWNER_HASH="01729b4d5d3e455f8bacc0637897aa134b9fb122fc148113f0d0180dfab464f4";
@@ -457,7 +457,7 @@ function openEvent(){const p=activeEvent();if(!p)return;
 
 /* ---------- push notifications: asked only on tap; on iPhone only inside the installed app (Apple's rule) ---------- */
 const VAPID="BGx07AqVN8ALvNMYIuAvwyvNE92-8eE8hhwU6KQ7jCqh8cAwPZk35SY3GhhFt1IQxFaOuEkQDYcTi_EcxTzlVNU"; // public Web Push key (Firebase Cloud Messaging)
-const PUSH_LIVE=false; // switched on once the pushTokens rule (attendance-app PR #97) is live
+const PUSH_LIVE=true;
 const pushOk=()=>PUSH_LIVE&&VAPID&&"Notification" in window&&"serviceWorker" in navigator&&"PushManager" in window&&(!isIOS||standalone);
 if(pushOk()&&Notification.permission==="default"&&!store.get("ttc_push_no"))introDone.then(()=>{$("#pushSec").hidden=false});
 $("#pushOn").onclick=async()=>{
