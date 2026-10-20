@@ -456,8 +456,9 @@ function openEvent(){const p=activeEvent();if(!p)return;
   if(!ME.user)return toast("כדי להירשם, נכנסים קודם עם Google באזור האישי");if(!ME.member)return memberSheet();eventSheet(p,true)}
 
 /* ---------- push notifications: asked only on tap; on iPhone only inside the installed app (Apple's rule) ---------- */
-const VAPID=""; // public Web Push key from Firebase → Cloud Messaging → Web Push certificates
-const pushOk=()=>VAPID&&"Notification" in window&&"serviceWorker" in navigator&&"PushManager" in window&&(!isIOS||standalone);
+const VAPID="BGx07AqVN8ALvNMYIuAvwyvNE92-8eE8hhwU6KQ7jCqh8cAwPZk35SY3GhhFt1IQxFaOuEkQDYcTi_EcxTzlVNU"; // public Web Push key (Firebase Cloud Messaging)
+const PUSH_LIVE=false; // switched on once the pushTokens rule (attendance-app PR #97) is live
+const pushOk=()=>PUSH_LIVE&&VAPID&&"Notification" in window&&"serviceWorker" in navigator&&"PushManager" in window&&(!isIOS||standalone);
 if(pushOk()&&Notification.permission==="default"&&!store.get("ttc_push_no"))introDone.then(()=>{$("#pushSec").hidden=false});
 $("#pushOn").onclick=async()=>{
   const perm=await Notification.requestPermission(); // must be the first await, inside the tap
