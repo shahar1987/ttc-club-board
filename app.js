@@ -391,5 +391,5 @@ function startAuth(){
     renderMe();if(u&&!ME.member&&sheet.hidden)memberSheet()}),{once:true});
   const sc=document.createElement("script");sc.src="auth.js?v="+(BUILD||"1");sc.defer=true;document.head.appendChild(sc);
 }
-const SIGNIN_ON=false; // switched on after the attendance-app rules (PR #96) are live and Google sign-in is enabled in Firebase
+const SIGNIN_ON=true;
 if(SIGNIN_ON)introDone.then(()=>setTimeout(startAuth,300));
