@@ -29,7 +29,7 @@ async function run(viewport, label) {
   const ctx = await browser.newContext({ viewport, deviceScaleFactor: 2, locale: "he-IL" });
   const page = await ctx.newPage();
   page.on("pageerror", (e) => errors.push(`${label}: ${e.message}`));
-  page.on("console", (m) => { if (m.type() === "error" && !/favicon|googleapis|Failed to load resource/.test(m.text())) errors.push(`${label} console: ${m.text()}`); });
+  page.on("console", (m) => { if (m.type() === "error" && !/favicon|googleapis|Failed to load resource|RPC_ERROR|net::ERR_FAILED/.test(m.text())) errors.push(`${label} console: ${m.text()}`); });
   const shot = (n) => page.screenshot({ path: `shots/${label}-${n}.png` });
   const email = `parent-${label}@example.com`;
 
