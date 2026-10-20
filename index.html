@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="he" dir="rtl">
+<html lang="he" dir="rtl" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
@@ -10,13 +10,13 @@
 <meta property="og:title" content="מועדון טניס שולחן מבואות החרמון">
 <meta property="og:description" content="המשחק הבא, הליגות, הדירוג והאימונים של המועדון">
 <meta property="og:image" content="icon-512.png">
-<meta name="theme-color" content="#2c5545">
+<meta name="theme-color" content="#ffffff">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="טנ״ש חרמון">
 <style>
 @font-face{font-family:"Rubik";font-style:normal;font-weight:400;font-display:swap;src:url(fonts/rubik-hebrew-400-normal.woff2) format("woff2");unicode-range:U+0307-0308,U+0590-05FF,U+200C-2010,U+20AA,U+25CC,U+FB1D-FB4F}
@@ -288,9 +288,32 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
 .screen.enter-home .stagger>*{animation:rise .55s var(--ease) both}
 .stagger>*:nth-child(2){animation-delay:.06s}.stagger>*:nth-child(3){animation-delay:.12s}.stagger>*:nth-child(4){animation-delay:.18s}.stagger>*:nth-child(5){animation-delay:.24s}.stagger>*:nth-child(6){animation-delay:.3s}
 @keyframes rise{from{opacity:0;transform:translateY(12px)}}
-.splash{position:absolute;inset:0;z-index:50;background:var(--green);display:grid;place-items:center;transition:opacity .45s,visibility .45s}
+/* opening: a ball drops onto the table line, the crest springs up where it lands, then the club name */
+.splash{position:absolute;inset:0;z-index:50;background:#fff;display:grid;place-items:center;transition:opacity .5s var(--ease),visibility .5s}
 .splash.gone{opacity:0;visibility:hidden}
-.splash .sb{width:18px;height:18px;border-radius:50%;background:#fff;animation:bounce .55s cubic-bezier(.3,0,.7,1) infinite alternate}
+.splash.gone .intro{transform:scale(1.06);transition:transform .5s var(--ease)}
+.intro{display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 24px}
+.stage{position:relative;width:120px;height:132px}
+.stage img{position:absolute;left:50%;bottom:12px;width:96px;height:96px;margin-left:-48px;border-radius:26px;box-shadow:0 10px 30px rgba(44,85,69,.18);
+  opacity:0;transform:scale(.55);animation:crest .7s cubic-bezier(.34,1.56,.64,1) .78s forwards}
+.stage .ln{position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;background:var(--line);transform:scaleX(0);animation:ln .5s var(--ease) .05s forwards}
+.stage .b{position:absolute;left:50%;bottom:2px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#f39a3d;box-shadow:inset -2px -2px 0 rgba(0,0,0,.08);
+  transform:translateY(-190px);animation:drop .95s linear .1s forwards}
+.intro h1{font-family:var(--display);font-weight:400;font-size:28px;line-height:1.1;color:var(--green);margin:18px 0 4px;opacity:0;transform:translateY(8px);animation:up .5s var(--ease) 1.05s forwards}
+.intro p{margin:0;color:var(--muted);font-size:14px;opacity:0;transform:translateY(8px);animation:up .5s var(--ease) 1.2s forwards}
+@keyframes ln{to{transform:scaleX(1)}}
+@keyframes crest{to{opacity:1;transform:none}}
+@keyframes up{to{opacity:1;transform:none}}
+@keyframes drop{
+  0%{transform:translateY(-190px);animation-timing-function:cubic-bezier(.5,0,1,1)}
+  38%{transform:translateY(0) scale(1.25,.75);animation-timing-function:cubic-bezier(0,0,.5,1)}
+  58%{transform:translateY(-70px)}
+  58.1%{animation-timing-function:cubic-bezier(.5,0,1,1)}
+  76%{transform:translateY(0) scale(1.15,.85);animation-timing-function:cubic-bezier(0,0,.5,1)}
+  86%{transform:translateY(-22px);animation-timing-function:cubic-bezier(.5,0,1,1)}
+  100%{transform:translateY(0) scale(0);opacity:0}}
+.splash.quick .stage *,.splash.quick h1,.splash.quick p{animation-duration:.01ms!important;animation-delay:0s!important}
+@media (prefers-reduced-motion:reduce){.stage img,.intro h1,.intro p{opacity:1!important;transform:none!important}.stage .b{display:none}.stage .ln{transform:none}}
 @keyframes bounce{from{transform:translateY(-36px)}to{transform:translateY(0) scale(1.15,.85)}}
 
 @media (prefers-reduced-motion:reduce){
@@ -304,7 +327,7 @@ h2{font-size:17px;font-weight:700;margin:0;letter-spacing:-.005em}
 <body>
 <div class="app" id="app">
 
-<div class="splash" id="splash" aria-hidden="true"><span class="sb"></span></div>
+<div class="splash" id="splash" aria-hidden="true"><div class="intro"><div class="stage"><span class="ln"></span><img src="icon-192.png" alt=""><span class="b"></span></div><h1>מבואות החרמון</h1><p>מועדון טניס שולחן ע״ש רוני גלבוע</p></div></div>
 
 <!-- HOME -->
 <section class="screen" id="s-home" data-tab="home" aria-label="בית">

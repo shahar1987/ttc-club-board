@@ -273,17 +273,21 @@ $("#installBtn").addEventListener("click",async()=>{track("click","install");
 3. לוחצים "הוסף". האייקון של המועדון יופיע לצד שאר האפליקציות.</div>`)});
 if("serviceWorker" in navigator&&location.protocol==="https:")addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 
+/* ---------- opening: full intro once per visit, a quick fade when coming back in the same session ---------- */
+const seen=(()=>{try{const v=sessionStorage.getItem("ttc_intro");sessionStorage.setItem("ttc_intro","1");return !!v}catch(e){return false}})();
+if(seen)$("#splash").classList.add("quick");
+const introDone=new Promise(r=>setTimeout(r,seen||RM.matches?150:1900));
+function hideSplash(){introDone.then(()=>{$("#splash").classList.add("gone");$("#s-home").classList.add("enter-home")})}
 /* ---------- boot ---------- */
 function boot(){
   renderHome();renderPosts();renderLeagueTabs();renderLeague(0);renderRank();renderClub();
   const start=(location.hash||"").slice(1);
   moveBall("home",true);
-  $("#s-home").classList.add("enter-home");
-  $("#splash").classList.add("gone");
+  hideSplash();
   if(ORDER.includes(start)&&start!=="home")setTimeout(()=>go(start,{silent:true}),150);
 }
 Promise.all([
   fetch("data.json",{cache:"no-store"}).then(r=>r.json()),
   fetch("posts.json",{cache:"no-store"}).then(r=>r.ok?r.json():{}).catch(()=>({}))
 ]).then(([d,p])=>{D=cleanData(d);POSTS=Array.isArray(p.posts)?p.posts:[];boot()})
- .catch(()=>{$("#splash").classList.add("gone");$("#hero").innerHTML='<div class="hero"><div class="kick">אין חיבור כרגע. נסו לרענן בעוד רגע.</div></div>'});
+ .catch(()=>{hideSplash();$("#hero").innerHTML='<div class="hero"><div class="kick">אין חיבור כרגע. נסו לרענן בעוד רגע.</div></div>'});
