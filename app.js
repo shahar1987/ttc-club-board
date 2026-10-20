@@ -273,7 +273,9 @@ document.addEventListener("click",e=>{const a=e.target.closest("[data-soc]");if(
 let deferredInstall=null;
 const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
-const inApp=/FBAN|FBAV|Instagram|Line\//i.test(navigator.userAgent);
+// Google refuses sign-in inside apps' built-in browsers; send those visitors to a real browser first
+const UA=navigator.userAgent;
+const inApp=/FBAN|FBAV|Instagram|Line\/|; wv\)|LinkedInApp|BytedanceWebview|musical_ly|Snapchat|MicroMessenger/i.test(UA)||(/iPhone|iPad|iPod/.test(UA)&&!/Safari\//.test(UA)&&!navigator.standalone);
 addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e});
 addEventListener("appinstalled",()=>{$("#installSec").hidden=true;toast("האפליקציה הותקנה")});
 // shown to everyone who isn't already inside the installed app; the button knows the right way per phone
