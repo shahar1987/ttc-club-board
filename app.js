@@ -520,6 +520,17 @@ addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#pop").hidden)$("#popLat
 function openEvent(){const p=activeEvent();if(!p)return;
   if(!ME.user)return toast("כדי להירשם, נכנסים קודם עם Google באזור האישי");if(!ME.member||!ME.member.phone)return memberSheet();eventSheet(p,true)}
 
+/* ---------- scroll craft: each screen's scroll drives one picture (hero layers + served ball, club wipe, competitions zoom) ---------- */
+(()=>{const clamp=v=>v>0?Math.min(1,v):0,sh=$("#sh"),ball=sh&&sh.querySelector(".sh-ball");
+  const bind=(screen,el,fn)=>{if(!screen||!el)return;let q=0;const run=()=>{q=0;fn()};screen.addEventListener("scroll",()=>{if(!q)q=requestAnimationFrame(run)},{passive:true});addEventListener("resize",run);run()};
+  // the serve: from the near half of the real table, over the net, to the far half — tied to how far you scrolled
+  const serve=p=>{if(!ball)return;const x=72-40*p,y=70-18*p-Math.sin(p*Math.PI)*16,k=1-.45*p;ball.style.transform=`translate(${x/2.1*100}%,${y/2.1*100*.75}%) scale(${k})`};
+  bind($("#s-home"),sh,()=>{if(RM.matches)return serve(0);const p=clamp($("#s-home").scrollTop/((sh.offsetHeight||1)*.85));sh.style.setProperty("--p",p.toFixed(4));serve(p)});
+  const chap=$("#chap");if(chap){if(RM.matches||!("IntersectionObserver" in window))chap.classList.add("open");else new IntersectionObserver((es,o)=>{if(es.some(e=>e.isIntersecting)){chap.classList.add("open");o.disconnect()}},{threshold:.35}).observe(chap)}
+  const z=$("#zoomer");bind($("#s-comp"),z,()=>{const s=$("#s-comp").scrollTop;z.style.setProperty("--z",RM.matches?1:clamp(s/((z.offsetHeight||1)*.7)).toFixed(4))});
+  if(sh)introDone.then(()=>{if(!RM.matches)sh.classList.add("enter");setTimeout(()=>sh.classList.add("ready"),RM.matches?0:900)});
+})();
+
 /* ---------- push notifications: asked only on tap; on iPhone only inside the installed app (Apple's rule) ---------- */
 const VAPID="BGx07AqVN8ALvNMYIuAvwyvNE92-8eE8hhwU6KQ7jCqh8cAwPZk35SY3GhhFt1IQxFaOuEkQDYcTi_EcxTzlVNU"; // public Web Push key (Firebase Cloud Messaging)
 const PUSH_LIVE=true;
