@@ -1,6 +1,6 @@
 // Network first so parents always see fresh results; the cache only answers when there is no signal.
-const CACHE = "ttc-v7";
-const SHELL = ["./", "index.html", "app.js", "manifest.json", "icon-192.png", "icon-512.png", "data.json", "posts.json"];
+const CACHE = "ttc-v8";
+const SHELL = ["./", "index.html", "app.js", "manifest.json", "icon-192.png", "icon-512.png", "logo.png", "mark.png", "data.json", "posts.json"];
 
 self.addEventListener("install", e => {
   self.skipWaiting();
@@ -20,7 +20,7 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
   const key = new URL(req.url); key.search = "";
   e.respondWith(
-    fetch(req).then(res => {
+    fetch(req, { cache: "no-cache" }).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(key.href, copy)); }
       return res;
     }).catch(() => caches.match(key.href).then(m => m || caches.match("index.html")))
