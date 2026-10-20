@@ -17,7 +17,6 @@ const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const RM=matchMedia("(prefers-reduced-motion: reduce)");
 const CAT={S:"בוגרים",S40:"ותיקים 40+",S50:"ותיקים 50+",S60:"ותיקים 60+",S70:"ותיקים 70+",J19:"נוער עד 19",Y17:"נוער עד 17",C14:"עד 15",C15:"עד 15",M13:"עד 13",M12:"עד 13",B11:"עד 11",B10:"עד 11",B9:"עד 11"};
-const AGES=[["ילדים","עד גיל 11",c=>/^B/.test(c)],["צעירים","עד גיל 15",c=>/^[MC]/.test(c)],["נוער","עד גיל 19",c=>/^[JY]/.test(c)],["בוגרים","",c=>c==="S"],["ותיקים","40 ומעלה",c=>/^S\d/.test(c)]];
 const DAYS=["א׳","ב׳","ג׳","ד׳","ה׳","ו׳","ש׳"];
 let D=null,POSTS=[];
 if(top!==self){try{top.location=location.href}catch(e){}document.documentElement.innerHTML="";throw new Error("framed")} // no framing of the board
@@ -259,8 +258,6 @@ function renderClub(){
   $("#venueSeg").innerHTML=D.training.map((v,i)=>`<button role="tab" data-i="${i}" aria-selected="${i===0}">${esc(v.v)}</button>`).join("");
   const slots=i=>{const v=D.training[i];$("#slots").innerHTML=!v?"":v.g.map(([g,d,t,c])=>`<div class="slot"><b>${esc(g)}</b><span class="t num">${esc(t)}</span><span>ימים ${esc(d)}</span><span>מאמן: ${esc(c)}</span></div>`).join("")};
   slots(0);segment($("#venueSeg"),b=>{slots(+b.dataset.i);slideIn($("#slots"),1)});
-  $("#ages").innerHTML=AGES.map(([t,s,f])=>{const ps=D.players.filter(p=>f(p.c)).sort((a,b)=>b.pts-a.pts);if(!ps.length)return"";
-    return `<div class="age"><h3>${t}<span>${s?s+" · ":""}${ps.length} שחקנים</span></h3><div class="chips">${ps.map(p=>`<button class="chip" data-pid="${p.id}">${esc(dn(p))}</button>`).join("")}</div></div>`}).join("");
   const now=new Date(),ev=D.events.filter(e=>when(e[0],"23:59")>=now).sort((a,b)=>when(a[0])-when(b[0])).slice(0,5);
   $("#evs").innerHTML=ev.map(([d,n,u])=>{const x=when(d);return `<a class="ev" href="${esc(u)}" target="_blank" rel="noopener"><span class="d num">${x.getDate()}<small>${x.toLocaleDateString("he-IL",{month:"short"})}</small></span><span>${esc(n)}</span></a>`}).join("");
   $("#evSec").hidden=!ev.length;
