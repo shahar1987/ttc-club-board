@@ -311,7 +311,7 @@ if("serviceWorker" in navigator&&location.protocol==="https:"){
 }
 
 /* ---------- opening: full intro once per visit, a quick fade when coming back in the same session ---------- */
-const seen=(()=>{try{const v=sessionStorage.getItem("ttc_intro");sessionStorage.setItem("ttc_intro","1");return !!v}catch(e){return false}})();
+const seen=standalone||!!store.get("ttc_intro");store.set("ttc_intro","1");
 if(seen)$("#splash").classList.add("quick");
 const introDone=new Promise(r=>setTimeout(r,seen||RM.matches?150:1900));
 function hideSplash(){introDone.then(()=>{$("#splash").classList.add("gone");$("#s-home").classList.add("enter-home")})}
@@ -352,10 +352,11 @@ let ME={user:null,member:null,ready:false};
 const PHONE_OK=v=>/^(\+?972|0)5\d{8}$/.test(v.replace(/[\s-]/g,""));
 function renderMe(){
   const el=$("#me");$("#meSec").hidden=false;const al=$("#adminLink");al&&al.remove();
-  if(!ME.user){el.innerHTML=`<div class="tx"><b>האזור האישי</b>התחברו כדי שנזהה אתכם במועדון ונעדכן אתכם. הצפייה באפליקציה פתוחה גם בלי.</div><button class="gbtn" id="gIn" type="button">${GICON}כניסה</button>`;return}
+  if(!ME.user){el.innerHTML=`<div class="tx"><b>האזור האישי</b>התחברו כדי שנזהה אתכם במועדון ונעדכן אתכם. הצפייה באפליקציה פתוחה גם בלי.</div><button class="gbtn" id="gIn" type="button">${GICON}כניסה</button>`;if(pushAsk())el.insertAdjacentHTML("beforeend",'<button class="btn invite" id="pushOn" type="button">🔔 לקבל התראות מהמועדון</button>');return}
   if(!ME.member){el.innerHTML=`<div class="tx"><b>עוד צעד קטן</b>נשאר רק להוסיף טלפון.</div><button class="btn" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">השלמה</button>`;return}
   el.innerHTML=`<div class="tx"><b>${esc(ME.member.name)}</b>מחובר/ת · ${esc(ME.user.email)}</div><button class="btn ghost" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">הפרטים שלי</button>`;
   el.insertAdjacentHTML("beforeend",'<button class="btn invite" id="invite" type="button">🎁 להזמין חבר/ה לאימון ניסיון</button>');
+  if(pushAsk())el.insertAdjacentHTML("beforeend",'<button class="btn invite" id="pushOn" type="button">🔔 לקבל התראות מהמועדון</button>');
   isOwner(ME.user.email).then(o=>{if(o&&!$("#adminLink"))$("#tabbar").insertAdjacentHTML("beforeend",'<a class="tab" id="adminLink" href="https://claude.ai/artifact/3SXiwqugcLXd7LS3ZZ82CY" target="_blank" rel="noopener"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>ניהול</a>');moveBall(current,true)});
 }
 // the owner's address is kept only as a hash in this public code; the dashboard itself checks the Claude account
@@ -405,7 +406,7 @@ function startAuth(){
   const sc=document.createElement("script");sc.src="auth.js?v="+(BUILD||"1");sc.defer=true;document.head.appendChild(sc);
 }
 const SIGNIN_ON=true;
-if(SIGNIN_ON)introDone.then(()=>setTimeout(startAuth,300));
+if(SIGNIN_ON){introDone.then(()=>setTimeout(startAuth,300));addEventListener("load",()=>{try{renderMe()}catch(e){}})} // card shows at once; fills in when sign-in state is known
 
 /* ---------- event popup: after a member finished joining, an active event post pops up once with one-tap registration ---------- */
 const SHIRTS=["XS","S","M","L","XL","XXL","ילדים 6","ילדים 8","ילדים 10","ילדים 12","ילדים 14"];
@@ -469,13 +470,14 @@ function openEvent(){const p=activeEvent();if(!p)return;
 const VAPID="BGx07AqVN8ALvNMYIuAvwyvNE92-8eE8hhwU6KQ7jCqh8cAwPZk35SY3GhhFt1IQxFaOuEkQDYcTi_EcxTzlVNU"; // public Web Push key (Firebase Cloud Messaging)
 const PUSH_LIVE=true;
 const pushOk=()=>PUSH_LIVE&&VAPID&&"Notification" in window&&"serviceWorker" in navigator&&"PushManager" in window&&(!isIOS||standalone);
-if(pushOk()&&Notification.permission==="default"&&!store.get("ttc_push_no"))introDone.then(()=>{$("#pushSec").hidden=false});
-$("#pushOn").onclick=async()=>{
+const pushAsk=()=>pushOk()&&Notification.permission==="default"&&!store.get("ttc_push_no");
+document.addEventListener("click",e=>{if(e.target.closest("#pushOn"))pushOnClick()});
+async function pushOnClick(){
   const perm=await Notification.requestPermission(); // must be the first await, inside the tap
-  if(perm!=="granted"){store.set("ttc_push_no","1");$("#pushSec").hidden=true;return toast("אפשר להפעיל אחר כך מהגדרות הדפדפן")}
+  if(perm!=="granted"){store.set("ttc_push_no","1");renderMe();return toast("אפשר להפעיל אחר כך מהגדרות הדפדפן")}
   $("#pushOn").disabled=true;
   const wait=()=>window.TTCAuth?Promise.resolve():new Promise(r=>addEventListener("ttc-auth-ready",r,{once:true}));
-  try{await wait();await TTCAuth.enablePush(VAPID,isIOS?"ios":DEV==="mobile"?"android":"desktop");$("#pushSec").hidden=true;toast("ההתראות הופעלו 🔔");track("click","push-on")}
+  try{await wait();await TTCAuth.enablePush(VAPID,isIOS?"ios":DEV==="mobile"?"android":"desktop");renderMe();toast("ההתראות הופעלו 🔔");track("click","push-on")}
   catch(e){$("#pushOn").disabled=false;toast("לא הצלחנו להפעיל התראות במכשיר הזה")}};
 
 /* ---------- bring a friend: members share a personal link; the friend lands on a welcome popup with one tap to book a free trial ---------- */
