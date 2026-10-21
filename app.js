@@ -372,7 +372,7 @@ function adminTab(){if(!$("#adminLink")){$("#tabbar").insertAdjacentHTML("before
 function renderMe(){
   const el=$("#me");$("#meSec").hidden=false;const al=$("#adminLink");al&&al.remove();
   // open portal: no sign-in for visitors (owner's decision 20.10.2026) — the card only offers notifications and inviting a friend
-  if(!ME.user){el.innerHTML=`<div class="tx"><b>המועדון בכיס</b>עדכונים, משחקים ותחרויות. אפשר לקבל התראות ולהזמין חברים לאימון ניסיון.</div><button class="btn invite" id="invite" type="button">🎁 להזמין חבר/ה לאימון ניסיון</button>`;if(pushAsk())el.insertAdjacentHTML("beforeend",'<button class="btn invite" id="pushOn" type="button">🔔 לקבל התראות מהמועדון</button>');if(store.get("ttc_admin"))adminTab();return}
+  if(!ME.user){const w=whoInfo(),hi=w&&w.n?`שלום ${esc(w.n.split(" ")[0])} 👋`:"המועדון בכיס";el.innerHTML=`<div class="tx"><b>${hi}</b>עדכונים, משחקים ותחרויות. אפשר לקבל התראות ולהזמין חברים לאימון ניסיון.</div><button class="btn invite" id="invite" type="button">🎁 להזמין חבר/ה לאימון ניסיון</button>`;if(pushAsk())el.insertAdjacentHTML("beforeend",'<button class="btn invite" id="pushOn" type="button">🔔 לקבל התראות מהמועדון</button>');if(store.get("ttc_admin"))adminTab();return}
   if(!ME.member){el.innerHTML=`<div class="tx"><b>עוד צעד קטן</b>נשאר רק להוסיף טלפון.</div><button class="btn" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">השלמה</button>`;return}
   el.innerHTML=`<div class="tx"><b>${esc(ME.member.name)}</b>מחובר/ת · ${esc(ME.user.email)}</div><button class="btn ghost" id="meEdit" type="button" style="min-height:44px;padding:8px 14px">הפרטים שלי</button>`;
   el.insertAdjacentHTML("beforeend",'<button class="btn invite" id="invite" type="button">🎁 להזמין חבר/ה לאימון ניסיון</button>');
@@ -401,7 +401,7 @@ function whoSheet(){
   </form>`);
   let role="";
   $("#wRole").onclick=e=>{const b=e.target.closest("[data-r]");if(!b)return;role=b.dataset.r;$$("#wRole .chip").forEach(c=>{const on=c===b;c.setAttribute("aria-checked",on);c.style.borderColor=on?"var(--green)":"";c.style.background=on?"var(--tint)":""})};
-  const done=v=>{store.set("ttc_who",JSON.stringify(v));closeSheet();logVisit();setTimeout(maybePopup,700)};
+  const done=v=>{store.set("ttc_who",JSON.stringify(v));closeSheet();try{renderMe()}catch(e){}logVisit();setTimeout(maybePopup,700)};
   $("#wSkip").onclick=()=>done({skip:1});
   $("#wForm").onsubmit=e=>{e.preventDefault();const n=$("#wName").value.replace(/[<>"]/g,"").replace(/\s+/g," ").trim();
     if(n.split(" ").filter(x=>x.length>1).length<2)return $("#wErr").textContent="נא לכתוב שם פרטי ושם משפחה";
