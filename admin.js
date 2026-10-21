@@ -35,7 +35,7 @@ function notOwner() {
   main.innerHTML = `<div class="center screen"><img src="logo.png" alt=""><h2>הדף הזה פרטי</h2><div class="muted">אין לחשבון הזה גישה לניהול.</div><div class="row" style="justify-content:center"><a class="btn ghost" href="./" style="display:inline-flex;align-items:center;text-decoration:none">לפורטל</a><button class="btn ghost" id="out" type="button">התנתקות</button></div></div>`;
   $("#out").onclick = () => TTCAuth.signOut();
 }
-const ALL_TABS = [["posts", "📝", "עדכונים"], ["push", "🔔", "התראה"], ["members", "👥", "נרשמים"], ["signups", "🏃", "הרשמות"], ["managers", "🔑", "מנהלים"], ["more", "⋯", "עוד"]];
+const ALL_TABS = [["posts", "📝", "עדכונים"], ["push", "🔔", "התראה"], ["members", "👥", "נרשמים"], ["signups", "🏃", "הרשמות"], ["visits", "📈", "כניסות"], ["managers", "🔑", "מנהלים"], ["more", "⋯", "עוד"]];
 // a manager publishes and edits updates only (the rules enforce the same)
 let TABS = ALL_TABS;
 function tabs() {
@@ -43,7 +43,7 @@ function tabs() {
   bar.innerHTML = TABS.map(([k, i, l]) => `<button class="tab" role="tab" type="button" data-tab="${k}" aria-selected="${k === TAB}"><span class="ic" aria-hidden="true">${i}</span>${l}</button>`).join("");
 }
 document.addEventListener("click", (e) => { const b = e.target.closest("[data-tab]"); if (b) go(b.dataset.tab); });
-function go(t) { if (!TABS.some((x) => x[0] === t)) t = "posts"; TAB = t; tabs(); try { history.replaceState(null, "", "#" + t); } catch (e) {} ({ posts, push, members, signups, managers, more })[t](); scrollTo(0, 0); }
+function go(t) { if (!TABS.some((x) => x[0] === t)) t = "posts"; TAB = t; tabs(); try { history.replaceState(null, "", "#" + t); } catch (e) {} ({ posts, push, members, signups, visits, managers, more })[t](); scrollTo(0, 0); }
 
 addEventListener("ttc-auth-ready", () => {
   A = TTCAuth.admin;
@@ -261,6 +261,26 @@ async function signups() {
         <div class="muted">${esc(s.heat)} · ${s.gender === "נ" ? "נקבה" : "זכר"} · ${esc(s.birth)} · חולצה ${esc(s.shirt)} · ${esc(s.city)}</div><div class="muted">נרשם ע"י ${esc(s.byName)} · <a href="tel:${esc(s.phone)}" dir="ltr">${esc(s.phone)}</a></div></div>`).join("")}</div>`;
   }).join("") : '<div class="card muted">עוד אין הרשמות.</div>';
   main.onclick = async (e) => { const d = e.target.closest("[data-sdel]"); if (!d) return; if (!confirm("לבטל את ההרשמה של המשתתף הזה?")) return; await run(() => A.deleteSignup(d.dataset.sdel), "ההרשמה בוטלה"); signups(); };
+}
+
+/* ---------- visits: one doc per device per day, name typed once by the visitor (optional) ---------- */
+async function visits() {
+  main.onclick = null;
+  main.innerHTML = `<section class="screen"><h2>כניסות לפורטל</h2><div id="vl"><div class="muted">טוען…</div></div></section>`;
+  const ymd = (d) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+  const ago = (n) => ymd(new Date(Date.now() - n * 86400e3));
+  let list = [];
+  try { list = await run(() => A.visits(ago(29))); } catch (e) { $("#vl").innerHTML = '<div class="err">לא הצלחנו לטעון.</div>'; return; }
+  const uniq = (from) => new Set(list.filter((x) => x.day >= from).map((x) => x.v)).size;
+  const by = {}; for (const x of list) { const p = (by[x.v] = by[x.v] || { days: 0, last: "" }); p.days++; if (x.day >= p.last) { p.last = x.day; p.n = x.n || p.n; p.r = x.r || p.r; p.d = x.d; } else { p.n = p.n || x.n; p.r = p.r || x.r; } }
+  const people = Object.values(by).sort((a, b) => b.last.localeCompare(a.last) || String(a.n || "~").localeCompare(String(b.n || "~"), "he"));
+  const day = (d) => `${d.slice(6)}/${d.slice(4, 6)}`;
+  const named = people.filter((p) => p.n).length;
+  $("#vl").innerHTML = `<div class="stat"><div><b>${uniq(ago(0))}</b><small>היום</small></div><div><b>${uniq(ago(6))}</b><small>7 ימים</small></div><div><b>${uniq(ago(29))}</b><small>30 ימים</small></div></div>
+    <div class="muted" style="margin:-4px 0 12px">מכשירים שונים שנכנסו (מכשיר נספר פעם אחת ביום). ${named} מתוך ${people.length} כתבו שם.</div>
+    <input class="search" id="vq" type="search" placeholder="חיפוש שם">
+    <div class="list" id="vp">${people.map((p) => `<div class="card" data-n="${esc(p.n || "")}"><div class="row" style="justify-content:space-between"><b>${p.n ? esc(p.n) : '<span class="muted">בלי שם</span>'}</b><span class="muted">${day(p.last)}</span></div><div class="tags">${p.r ? `<span class="tag">${esc(p.r)}</span>` : ""}<span class="tag off">${p.days} ${p.days === 1 ? "יום" : "ימים"}</span>${p.d === "desktop" ? '<span class="tag off">מחשב</span>' : ""}</div></div>`).join("") || '<div class="card muted">עוד אין כניסות.</div>'}</div>`;
+  $("#vq").oninput = (e) => { const q = e.target.value.trim(); document.querySelectorAll("#vp [data-n]").forEach((c) => (c.hidden = q && !c.dataset.n.includes(q))); };
 }
 
 /* ---------- more ---------- */

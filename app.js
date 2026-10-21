@@ -344,7 +344,7 @@ function boot(){
   const start=(location.hash||"").slice(1);
   moveBall("home",true);
   hideSplash();
-  introDone.then(()=>setTimeout(maybePopup,250)); // the event popup needs only the posts, not the Firebase bundle
+  introDone.then(()=>setTimeout(()=>{if(whoInfo())return logVisit(),maybePopup();whoSheet()},250)); // the event popup needs only the posts, not the Firebase bundle
   if(ORDER.includes(start)&&start!=="home")setTimeout(()=>go(start,{silent:true,quiet:true}),150);
 }
 Promise.all([
@@ -382,6 +382,32 @@ function renderMe(){
 // the owner's address is kept only as a hash in this public code; the dashboard itself checks the Claude account
 const OWNER_HASH="01729b4d5d3e455f8bacc0637897aa134b9fb122fc148113f0d0180dfab464f4";
 async function isOwner(email){try{const d=await crypto.subtle.digest("SHA-256",new TextEncoder().encode((email||"").trim().toLowerCase()));return [...new Uint8Array(d)].map(b=>b.toString(16).padStart(2,"0")).join("")===OWNER_HASH}catch(e){return false}}
+/* ---------- who's visiting: full name asked once per device (optional), one visit per device per day (owner's request 21.10.2026) ---------- */
+const ROLES=["הורה","שחקן/ית","מאמן/ת","אחר"];
+function whoInfo(){try{return JSON.parse(store.get("ttc_who")||"null")}catch(e){return null}}
+let visitSent=false;
+function logVisit(){if(visitSent)return;visitSent=true;const w=whoInfo()||{},d=new Date(),day=`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
+  const data={v:vid(),day,d:DEV};if(w.n)data.n=w.n.slice(0,60);if(ROLES.includes(w.r))data.r=w.r;
+  const go=()=>TTCAuth.visit&&TTCAuth.visit(data);window.TTCAuth?go():addEventListener("ttc-auth-ready",go,{once:true})}
+function whoSheet(){
+  openSheet(`<h2 class="post-h">נעים להכיר 👋</h2>
+  <form class="form" id="wForm" novalidate>
+    <label>שם מלא (פרטי ומשפחה)<input type="text" id="wName" maxlength="60" autocomplete="name" placeholder="למשל: דנה כהן" required></label>
+    <div class="chips" id="wRole" role="radiogroup" aria-label="מי את/ה">${ROLES.map(r=>`<button type="button" class="chip" role="radio" aria-checked="false" data-r="${r}">${r}</button>`).join("")}</div>
+    <div class="why">שואלים פעם אחת בלבד, כדי שהמועדון יידע מי משתמש בפורטל. נשמרים רק השם ותאריך הכניסה, ורק מנהל המועדון רואה אותם. <a href="privacy.html">מדיניות הפרטיות</a></div>
+    <div class="err" id="wErr" role="alert"></div>
+    <button class="btn" type="submit">כניסה לפורטל</button>
+    <button class="linkbtn" type="button" id="wSkip" style="color:var(--muted)">דילוג</button>
+  </form>`);
+  let role="";
+  $("#wRole").onclick=e=>{const b=e.target.closest("[data-r]");if(!b)return;role=b.dataset.r;$$("#wRole .chip").forEach(c=>{const on=c===b;c.setAttribute("aria-checked",on);c.style.borderColor=on?"var(--green)":"";c.style.background=on?"var(--tint)":""})};
+  const done=v=>{store.set("ttc_who",JSON.stringify(v));closeSheet();logVisit();setTimeout(maybePopup,700)};
+  $("#wSkip").onclick=()=>done({skip:1});
+  $("#wForm").onsubmit=e=>{e.preventDefault();const n=$("#wName").value.replace(/[<>"]/g,"").replace(/\s+/g," ").trim();
+    if(n.split(" ").filter(x=>x.length>1).length<2)return $("#wErr").textContent="נא לכתוב שם פרטי ושם משפחה";
+    done({n,r:role});toast(`ברוכים הבאים, ${n.split(" ")[0]}!`)};
+  setTimeout(()=>{try{$("#wName").focus({preventScroll:true})}catch(e){}},400);
+}
 function memberSheet(){
   const m=ME.member,isNew=!m;
   openSheet(`<h2 class="post-h">${isNew?"כמעט בפנים":"הפרטים שלי"}</h2>

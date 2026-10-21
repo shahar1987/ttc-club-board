@@ -159,6 +159,8 @@ async function adminFlow() {
   step = "admin-members"; await page.click("[data-tab=members]");
   await page.waitForSelector("#ml .card", { timeout: 10000 });
   await page.screenshot({ path: "shots/admin-3-members.png" }); ok("ניהול: רשימת הנרשמים נטענת");
+  step = "admin-visits"; await page.click("[data-tab=visits]"); await page.waitForSelector("#vp >> text=דנה כהן", { timeout: 10000 });
+  assert.ok(Number(await page.textContent(".stat div:first-child b")) >= 2, "two devices today"); ok("ניהול: רואים כמה נכנסו ומי");
   step = "admin-signups"; await page.click("[data-tab=signups]"); await page.waitForSelector("#sl .card", { timeout: 10000 }); ok("ניהול: מסך ההרשמות נטען");
   step = "admin-add-manager"; await page.click("[data-tab=managers]"); await page.waitForSelector("#mE");
   await page.fill("#mE", "mgr-e2e@example.com"); await page.fill("#mN", "עוזר"); await page.click("#mf button[type=submit]");
@@ -192,13 +194,17 @@ async function visitor(viewport, label) {
   page.on("pageerror", (e) => errors.push(`${label}: ${e.message}`));
   step = "visitor-open"; await page.goto(APP); await page.waitForSelector("#sh", { timeout: 10000 }); await page.waitForTimeout(3000);
   assert.equal(await page.$("#gate"), null, "no sign-in screen"); assert.equal(await page.isVisible("#adminLink"), false, "no admin tab for visitors");
+  step = "visitor-name"; await page.waitForSelector("#wForm", { timeout: 10000 });
+  await page.click("#wForm button[type=submit]"); assert.match(await page.textContent("#wErr"), /שם משפחה/, "full name required");
+  await page.fill("#wName", label === "small" ? "דנה כהן" : "יוסי לוי"); await page.click('#wRole [data-r="הורה"]'); await page.click("#wForm button[type=submit]");
+  ok(`${label}: שואלים שם מלא פעם אחת`);
   step = "visitor-popup"; await page.waitForSelector("#pop:not([hidden])", { timeout: 10000 });
   const [tab] = await Promise.all([ctx.waitForEvent("page", { timeout: 10000 }), page.click("#popGo")]);
   assert.match(tab.url(), /docs\.google\.com/, "registration opens the organisers' file"); await tab.close();
   step = "visitor-card"; await page.waitForSelector("#me #invite", { timeout: 10000 });
   await page.screenshot({ path: `shots/${label}-home.png` }); ok(`${label}: נכנסים בלי התחברות, חלון המרוץ מוביל להרשמה של המארגנים`);
   step = "visitor-popup-remembered"; await page.reload(); await page.waitForSelector("#sh", { timeout: 10000 }); await page.waitForTimeout(4000);
-  assert.equal(await page.isVisible("#pop"), false, "a closed popup stays closed"); ok(`${label}: אחרי שסגרו את חלון המרוץ הוא לא חוזר`);
+  assert.equal(await page.isVisible("#pop"), false, "a closed popup stays closed"); assert.equal(await page.isVisible("#wForm"), false, "name asked only once"); ok(`${label}: אחרי שסגרו את חלון המרוץ הוא לא חוזר`);
   await ctx.close();
 }
 
