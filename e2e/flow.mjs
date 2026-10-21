@@ -197,6 +197,8 @@ async function visitor(viewport, label) {
   assert.match(tab.url(), /docs\.google\.com/, "registration opens the organisers' file"); await tab.close();
   step = "visitor-card"; await page.waitForSelector("#me #invite", { timeout: 10000 });
   await page.screenshot({ path: `shots/${label}-home.png` }); ok(`${label}: נכנסים בלי התחברות, חלון המרוץ מוביל להרשמה של המארגנים`);
+  step = "visitor-popup-remembered"; await page.reload(); await page.waitForSelector("#sh", { timeout: 10000 }); await page.waitForTimeout(4000);
+  assert.equal(await page.isVisible("#pop"), false, "a closed popup stays closed"); ok(`${label}: אחרי שסגרו את חלון המרוץ הוא לא חוזר`);
   await ctx.close();
 }
 

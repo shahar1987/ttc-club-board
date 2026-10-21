@@ -502,9 +502,10 @@ function showPop(post,opts={}){const img=opts.img||(IMG_OK.test(post.img||"")?po
   popReturn=document.activeElement;const el=$("#pop");el.hidden=false;el.classList.add("on");requestAnimationFrame(()=>$("#popCard").focus({preventScroll:true}));track("post","popup:"+(post.popup?post.popup.event:"invite"))}
 function hidePop(){const el=$("#pop");el.hidden=true;el.classList.remove("on");popReturn&&popReturn.focus&&popReturn.focus({preventScroll:true})}
 async function maybePopup(){const p=activeEvent();if(!p||!$("#pop").hidden)return;
-  if(sheet.hidden)showPop(p)} // every entry shows it; "not now" only closes it for this visit
+  if(store.get("ttc_pop_"+p.popup.event))return; // closed once (X, "not now" or registration): never again on this device
+  if(sheet.hidden)showPop(p)}
 let popAway=0;document.addEventListener("visibilitychange",()=>{if(document.hidden)popAway=Date.now();else if(popAway&&Date.now()-popAway>60e3)maybePopup()}); // an installed app resumes instead of reloading
-$("#popGo").onclick=()=>{hidePop();if(popAction)return popAction();openEvent()};
+$("#popGo").onclick=()=>{hidePop();if(popAction)return popAction();const p=activeEvent();if(p)store.set("ttc_pop_"+p.popup.event,String(Date.now()));openEvent()};
 $("#popLater").onclick=$("#popX").onclick=()=>{if(popLaterFn){popLaterFn();return hidePop()}const p=activeEvent();if(p)store.set("ttc_pop_"+p.popup.event,String(Date.now()));hidePop()};
 $("#pop").addEventListener("click",e=>{if(e.target.id==="pop")$("#popLater").click()});
 addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("#pop").hidden)$("#popLater").click()});
