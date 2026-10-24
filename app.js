@@ -325,7 +325,7 @@ const IMG_OK=/^(img\/[\w.-]+|data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+)
 const tfetch=(u,o={},ms=6000)=>{const c=new AbortController();setTimeout(()=>c.abort(),ms);return fetch(u,{...o,signal:c.signal})};
 async function staffPosts(){try{
   // only visible posts: the rules refuse anything else to the public
-  const r=await tfetch("https://firestore.googleapis.com/v1/projects/ttcmh-2a752/databases/(default)/documents:runQuery?key=AIzaSyCmEVnBSkODaCZyrdEdO0vNQtvOnvgsQiA",{method:"POST",cache:"no-store",headers:{"content-type":"application/json"},
+  const r=await tfetch("https://firestore.googleapis.com/v1/projects/ttcmh-2a752/databases/(default)/documents:runQuery?key=AIzaSyDhPiyIrP1zOu5bNSpsQDyXFgZBP6rV7vo",{method:"POST",cache:"no-store",headers:{"content-type":"application/json"},
     body:JSON.stringify({structuredQuery:{from:[{collectionId:"boardPosts"}],where:{fieldFilter:{field:{fieldPath:"hidden"},op:"EQUAL",value:{booleanValue:false}}},limit:20}})},4000);
   if(!r.ok)return[];const j=await r.json();
   const v=f=>f?(f.stringValue??f.booleanValue??""):"";
@@ -334,7 +334,7 @@ async function staffPosts(){try{
   const list=(Array.isArray(j)?j:[]).map(x=>x.document).filter(Boolean).map(d=>{const f=d.fields||{};return{id:"s:"+d.name.split("/").pop(),title:String(v(f.title)).slice(0,90),text:String(v(f.text)).slice(0,1200),banner:v(f.banner)===true,pin:v(f.pin)===true,hidden:v(f.hidden)===true,link:String(v(f.link)),linkText:String(v(f.linkText)).slice(0,30),date:String(v(f.date)),imgId:String(v(f.img)),popup:pop(f.popup)}}).filter(x=>x.title);
   // images never change once saved, so each device downloads each one only once
   await Promise.all(list.filter(x=>/^[\w-]{1,40}$/.test(x.imgId)).map(async x=>{const k="ttc_img_"+x.imgId;let d=store.get(k);
-    if(!d){try{const r=await tfetch(`https://firestore.googleapis.com/v1/projects/ttcmh-2a752/databases/(default)/documents/boardImages/${x.imgId}?key=AIzaSyCmEVnBSkODaCZyrdEdO0vNQtvOnvgsQiA`,{},6000);
+    if(!d){try{const r=await tfetch(`https://firestore.googleapis.com/v1/projects/ttcmh-2a752/databases/(default)/documents/boardImages/${x.imgId}?key=AIzaSyDhPiyIrP1zOu5bNSpsQDyXFgZBP6rV7vo`,{},6000);
       if(r.ok){d=String(v(((await r.json()).fields||{}).data));if(IMG_OK.test(d))store.set(k,d)}}catch(e){}}
     if(d&&IMG_OK.test(d))x.img=d}));
   return list;
