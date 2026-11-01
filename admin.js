@@ -79,7 +79,7 @@ async function posts() {
       <h3>${esc(p.title)}</h3><div class="muted">${esc(p.date)}</div>
       <div class="tags">${p.hidden ? '<span class="tag off">מוסתר</span>' : '<span class="tag">גלוי</span>'}${p.pin ? '<span class="tag">נעוץ</span>' : ""}${p.banner ? '<span class="tag">באנר</span>' : ""}${p.popup ? `<span class="tag">חלון הרשמה · ${esc(EVENTS[p.popup.event] || p.popup.event)}</span>` : ""}</div>
       <div class="row"><button class="btn ghost" data-edit="${esc(p.id)}" type="button">עריכה</button><button class="btn ghost" data-hide="${esc(p.id)}" type="button">${p.hidden ? "הצגה" : "הסתרה"}</button><button class="btn warn" data-del="${esc(p.id)}" type="button">מחיקה</button></div>
-    </div></div></div>`).join("") : '<div class="card muted">עוד אין עדכונים. העדכון של מרוץ העגור פורסם בדשבורד הקודם ונשאר בפורטל.</div>';
+    </div></div></div>`).join("") : '<div class="card muted">עוד אין עדכונים.</div>';
   for (const t of main.querySelectorAll(".thumb[data-img]")) { const id = t.dataset.img; if (!id) continue; A.image(id).then((src) => { if (/^data:image\//.test(src)) t.innerHTML = `<img src="${src}" alt="">`; }).catch(() => {}); }
   const byId = (id) => list.find((p) => p.id === id);
   main.onclick = async (e) => {
