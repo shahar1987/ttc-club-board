@@ -1,0 +1,22 @@
+{
+ "posts": [
+  {
+   "id": "crane-2026",
+   "title": "אירוע בדיקה",
+   "text": "עדכון קבוע לבדיקה",
+   "date": "2026-10-20",
+   "pin": true,
+   "popup": {
+    "event": "crane-2026",
+    "heats": [
+     "4 ק״מ (משפחות)",
+     "10 ק״מ",
+     "21 ק״מ"
+    ],
+    "until": "2099-12-31"
+   },
+   "link": "https://docs.google.com/spreadsheets/d/e2e",
+   "linkText": "לקובץ ההרשמה"
+  }
+ ]
+}

@@ -30,6 +30,7 @@ jobs:
         run: |
           mkdir site && cp -r *.html *.js *.json *.png *.css fonts img site/ 2>/dev/null || true
           cp e2e/auth-e2e.js site/auth.js && cp e2e/auth-e2e.js site/auth-admin.js
+          cp e2e/posts-e2e.json site/posts.json # the popup flow needs a live event, whatever is published today
           sed -i "s#connect-src 'self'#connect-src 'self' http://127.0.0.1:9099 http://127.0.0.1:8080#; s#frame-src #frame-src http://127.0.0.1:9099 #" site/index.html site/admin.html
           sed -i "s#https://firestore.googleapis.com/v1/projects/ttcmh-2a752#http://127.0.0.1:8080/v1/projects/demo-ttcmh#g" site/app.js
           H=$(printf %s owner-e2e@example.com | sha256sum | cut -d' ' -f1); sed -i "s#const OWNER_HASH = \"[0-9a-f]*\"#const OWNER_HASH = \"$H\"#" site/admin.js
